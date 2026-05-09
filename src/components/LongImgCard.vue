@@ -11,7 +11,7 @@ const imgRef = ref<HTMLImageElement>()
 const translateY = ref(0)
 const transitionStyle = ref('')
 
-const SPEED = 65 // 像素/秒，调整为更舒适的滚动节奏
+const SPEED = 65
 
 let isAutoScrolling = false
 
@@ -37,7 +37,7 @@ function startScroll() {
   const remainingDist = maxScroll - currentPos
   const duration = remainingDist / SPEED
 
-  transitionStyle.value = `transform ${duration}s linear` // 使用 linear 保持匀速滚动
+  transitionStyle.value = `transform ${duration}s linear`
   translateY.value = -maxScroll
 }
 
@@ -45,19 +45,16 @@ function resetScroll() {
   if (!imgRef.value) return
   isAutoScrolling = false
   
-  // 获取当前实际位置，防止回弹跳跃
   const style = window.getComputedStyle(imgRef.value)
   const matrix = new ((window as any).DOMMatrix || (window as any).WebKitCSSMatrix)(style.transform)
   translateY.value = matrix.m42
-  
-  // 强制重绘以应用当前位置
-  imgRef.value.offsetHeight 
+
+  imgRef.value.offsetHeight
 
   transitionStyle.value = 'transform 0.3s ease-out'
   translateY.value = 0
 }
 
-// 兼容移动端触摸
 function handleTouchStart() {
   startScroll()
 }
@@ -100,19 +97,19 @@ function handleTouchEnd() {
 .long-img-card {
   position: relative;
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  border: none;
   border-radius: var(--card-radius);
   overflow: hidden;
   cursor: pointer;
-  transition: border-color var(--transition-normal), transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow var(--transition-normal);
+  transition: background-color var(--transition-normal), transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow var(--transition-normal);
   backdrop-filter: blur(16px);
-  height: 350px; /* 再次微调高度为 350px */
+  height: 350px;
   display: flex;
   flex-direction: column;
 }
 
 .long-img-card:hover {
-  border-color: var(--accent-blue-glow);
+  background: rgba(255, 255, 255, 0.035);
   transform: translateY(-8px) scale(1.01);
   box-shadow: 
     var(--card-shadow-hover),
@@ -162,7 +159,6 @@ function handleTouchEnd() {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* 兼容不支持 CSS 动画的浏览器 */
 @supports not (transform: translateY(0)) {
   .scrolling-img {
     height: 100%;

@@ -53,8 +53,6 @@ const pairs = [
   gap: 14px;
 }
 
-/* ──── card ──── */
-
 .card {
   --dur: 2.2s;
   position: relative;
@@ -62,13 +60,13 @@ const pairs = [
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: none;
   background: var(--bg-secondary);
-  transition: border-color var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 
 .card:hover {
-  border-color: rgba(99,102,241,0.15);
+  background: rgba(255,255,255,0.04);
 }
 .card-copy {
   position: absolute;
@@ -95,8 +93,6 @@ const pairs = [
   line-height: 1.5;
 }
 
-/* ──── img layers ──── */
-
 .img-base {
   position: absolute;
   inset: 0;
@@ -112,8 +108,6 @@ const pairs = [
   z-index: 2;
   clip-path: inset(0 50% 0 0);
 }
-
-/* ──── beam ──── */
 
 .beam {
   position: absolute;
@@ -153,8 +147,6 @@ const pairs = [
   );
 }
 
-/* ──── hover animation ──── */
-
 .card:hover .img-before {
   animation: clip-sweep var(--dur) ease-in-out forwards;
 }
@@ -163,7 +155,6 @@ const pairs = [
   animation: beam-sweep var(--dur) ease-in-out forwards;
 }
 
-/* 光束：中间 → 左 → 右 → 中间 */
 @keyframes beam-sweep {
   0%   { left: 50%; }
   35%  { left: 3%; }
@@ -171,7 +162,6 @@ const pairs = [
   100% { left: 50%; }
 }
 
-/* clip-path：与光束同步，控制 before 图可见区域 */
 @keyframes clip-sweep {
   0%   { clip-path: inset(0 50% 0 0); }
   35%  { clip-path: inset(0 97% 0 0); }

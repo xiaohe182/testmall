@@ -42,7 +42,6 @@ function useHistoryItem(item: HistoryItem) {
         class="history-item"
         @click="useHistoryItem(item)"
       >
-        <!-- 缩略图 -->
         <div class="thumb-wrap">
           <img
             v-if="item.type === 'img'"
@@ -52,7 +51,7 @@ function useHistoryItem(item: HistoryItem) {
             loading="lazy"
           />
           <div v-else class="thumb-video">
-            <img v-if="item.coverUrl" :src="item.coverUrl" alt="" class="thumb" loading="lazy" />
+            <img v-if="item.cover_image_url" :src="item.cover_image_url" alt="" class="thumb" loading="lazy" />
             <div class="play-overlay">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
                 <polygon points="5 3 19 12 5 21 5 3"/>
@@ -61,7 +60,6 @@ function useHistoryItem(item: HistoryItem) {
           </div>
         </div>
 
-        <!-- 信息 -->
         <div class="item-info">
           <p class="item-prompt">{{ item.prompt.slice(0, 40) }}{{ item.prompt.length > 40 ? '…' : '' }}</p>
           <div class="item-meta">
@@ -116,12 +114,12 @@ function useHistoryItem(item: HistoryItem) {
   background: rgba(255,255,255,0.04);
   padding: 2px 8px;
   border-radius: 100px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: none;
 }
 .clear-btn {
   padding: 4px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: none;
   background: transparent;
   color: var(--text-muted);
   font-size: 12px;
@@ -130,12 +128,10 @@ function useHistoryItem(item: HistoryItem) {
   transition: all var(--transition-fast);
 }
 .clear-btn:hover {
-  border-color: rgba(239,68,68,0.3);
   color: #f87171;
   background: rgba(239,68,68,0.06);
 }
 
-/* history list */
 .history-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -147,16 +143,14 @@ function useHistoryItem(item: HistoryItem) {
   padding: 12px;
   border-radius: 14px;
   background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
+  border: none;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 .history-item:hover {
-  border-color: rgba(99,102,241,0.15);
   background: rgba(255,255,255,0.03);
 }
 
-/* thumbnail */
 .thumb-wrap {
   width: 56px;
   height: 56px;
@@ -185,7 +179,6 @@ function useHistoryItem(item: HistoryItem) {
   background: rgba(0,0,0,0.35);
 }
 
-/* info */
 .item-info {
   flex: 1;
   min-width: 0;

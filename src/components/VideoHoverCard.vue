@@ -16,7 +16,6 @@ function handleMouseEnter() {
   el.play().catch(() => {})
 }
 
-/** 移出后回到初始态（poster / 未播放），而不是停在某一帧上像「暂停」 */
 function handleMouseLeave() {
   const el = videoRef.value
   if (!el) return
@@ -57,14 +56,13 @@ function handleMouseLeave() {
 .video-hover-card {
   position: relative;
   background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  border: none;
   border-radius: var(--card-radius);
   overflow: hidden;
   cursor: pointer;
   backdrop-filter: blur(16px);
 }
 
-/* 在 16:10 的基础上，media-container 总高度再多 10px */
 .media-shell {
   position: relative;
   width: 100%;

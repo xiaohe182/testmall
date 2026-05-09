@@ -18,10 +18,14 @@ defineProps<{ text?: string; hint?: string }>()
 .loading-state p { margin-top: 16px; font-size: 14px; }
 .hint { display: block; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
 .loader-ring {
-  width: 48px; height: 48px; margin: 0 auto;
-  border: 3px solid var(--border-color);
-  border-top-color: var(--accent-indigo);
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  border: none;
   border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--accent-indigo), rgba(99, 102, 241, 0.12));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
   animation: spin 1s linear infinite;
 }
 </style>

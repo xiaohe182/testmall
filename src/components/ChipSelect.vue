@@ -21,20 +21,15 @@ defineEmits<{
 </template>
 
 <style scoped>
-/* Define color variables within the component scope for clarity and consistency.
-  Colors are strictly based on analysis of image_0.png
-*/
 .size-row {
   --color-label-grey: rgba(255, 255, 255, 0.6);
   --color-bg-chip: rgb(18, 18, 20);
-  --color-border-chip: rgba(255, 255, 255, 0.1);
   --color-text-chip-muted: rgba(255, 255, 255, 0.6);
   --color-active-blue: #1496f3;
 
   margin-bottom: 24px;
 }
 
-/* Label Layout and Styling: Darker grey, bold font */
 .label-row {
   margin-bottom: 10px;
 }
@@ -45,20 +40,16 @@ defineEmits<{
   letter-spacing: 0.02em;
 }
 
-/* Options Layout: Flex row */
 .opts {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-/* Option Chips (General & Muted/Inactive): 
-  Deep background, tight padding, bold text.
-*/
 .chip {
   padding: 6px 14px;
   border-radius: 8px;
-  border: 1px solid var(--color-border-chip);
+  border: none;
   background: var(--color-bg-chip);
   color: var(--color-text-chip-muted);
   font-size: 13px;
@@ -70,24 +61,18 @@ defineEmits<{
   -webkit-font-smoothing: antialiased;
 }
 
-/* Hover Interaction (Inactive): Slightly lighten border and background for lift */
 .chip:hover:not(.active) {
-  border-color: rgba(255, 255, 255, 0.2);
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Active Interaction */
 .chip.active {
-  border-color: var(--color-active-blue);
   background: rgba(20, 150, 243, 0.1);
   color: var(--color-active-blue);
   font-weight: 600;
   box-shadow: 0 0 10px rgba(20, 150, 243, 0.1); 
 }
 
-/* Focus Visually (Keyboard navigation optimization) */
 .chip:focus-visible {
-  border-color: var(--color-active-blue);
-  box-shadow: 0 0 0 2px rgba(20, 150, 243, 0.25);
+  box-shadow: 0 8px 28px rgba(20, 150, 243, 0.18);
 }
 </style>

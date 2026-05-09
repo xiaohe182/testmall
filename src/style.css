@@ -11,8 +11,6 @@
   --bg-secondary: #12121a;
   --bg-card: #1a1a2e;
   --bg-card-hover: #222240;
-  --border-color: rgba(99, 102, 241, 0.15);
-  --border-glow: rgba(99, 102, 241, 0.4);
   --text-primary: #f0f0f5;
   --text-secondary: #a0a0b8;
   --text-muted: #6b6b80;
@@ -20,10 +18,8 @@
   --accent-purple: #a855f7;
   --accent-blue-glow: rgba(20, 150, 243, 0.3);
   --accent-blue-soft: rgba(20, 150, 243, 0.1);
-  
-  /* card common */
+
   --card-bg: rgba(255, 255, 255, 0.02);
-  --card-border: rgba(255, 255, 255, 0.06);
   --card-radius: 20px;
   --card-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.4);
   --card-glow-hover: 0 0 20px rgba(20, 150, 243, 0.2);
@@ -31,7 +27,7 @@
   --accent-cyan: #06b6d4;
   --gradient-main: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
   --gradient-card: linear-gradient(145deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.04));
-  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--border-color);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3);
   --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
   --radius-sm: 8px;
   --radius-md: 12px;

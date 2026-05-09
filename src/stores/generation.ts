@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { genImg, type ImgResult } from '@/api/img'
 import { submitVideo, fetchVideoTask, type VideoResult } from '@/api/video'
+import { DEFAULT_IMAGE_MODEL, IMAGE_MODELS } from '@/config/models'
 
 export type HistoryItem = {
   id: string
@@ -13,15 +14,14 @@ export type HistoryItem = {
 }
 
 export const useGenerationStore = defineStore('generation', () => {
-  // --- Image States ---
   const imgPrompt = ref('')
+  const imgModel = ref(DEFAULT_IMAGE_MODEL)
   const imgSize = ref('1024x1024')
   const imgBatchSize = ref(1)
   const imgResults = ref<ImgResult[]>([])
   const imgLoading = ref(false)
   const imgError = ref<string | null>(null)
 
-  // --- Video States ---
   const videoPrompt = ref('')
   const videoImageUrl = ref('')
   const videoResult = ref<VideoResult | null>(null)
@@ -29,27 +29,55 @@ export const useGenerationStore = defineStore('generation', () => {
   const videoStatus = ref('')
   const videoError = ref<string | null>(null)
 
-  // --- Common States ---
   const history = ref<HistoryItem[]>([])
 
-  // --- Getters ---
-  const canGenImg = computed(() => imgPrompt.value.trim().length > 0)
+  const currentImageModel = computed(() =>
+    IMAGE_MODELS.find(model => model.id === imgModel.value) ?? IMAGE_MODELS[0]
+  )
+  const currentImageSizeOptions = computed(() =>
+    currentImageModel.value.imageOptions?.recommendedSizes ?? ['1024x1024']
+  )
+  const currentImageQuality = computed(() =>
+    currentImageModel.value.imageOptions?.defaultQuality
+  )
+  const imageModelOptions = computed(() =>
+    IMAGE_MODELS.filter(model => model.enabled)
+  )
+  const imageModelPriceText = computed(() => {
+    const price = currentImageModel.value.pricing.cnyPerCall
+    return price === null ? '价格待确认' : `${price} 元/次`
+  })
+  const canGenImg = computed(() => {
+    const prompt = imgPrompt.value.trim()
+    const maxLength = currentImageModel.value.imageOptions?.promptMaxLength
+    return prompt.length > 0 && (!maxLength || prompt.length <= maxLength)
+  })
   const canGenVideo = computed(() => videoImageUrl.value.length > 0)
 
-  // --- Actions ---
+  function syncImageSizeWithModel() {
+    const options = currentImageSizeOptions.value
+    if (!options.includes(imgSize.value)) {
+      imgSize.value = currentImageModel.value.imageOptions?.defaultSize ?? options[0] ?? '1024x1024'
+    }
+  }
+
   async function generateImage() {
     if (!canGenImg.value) return
+    syncImageSizeWithModel()
     imgLoading.value = true
     imgError.value = null
     imgResults.value = []
 
     try {
-      // 模拟批量生成逻辑，实际 API 可能是单次调用
-      const tasks = Array.from({ length: imgBatchSize.value }).map(() => genImg(imgPrompt.value, imgSize.value))
+      const tasks = Array.from({ length: imgBatchSize.value }).map(() => genImg(imgPrompt.value, {
+        model: imgModel.value,
+        size: imgSize.value,
+        quality: currentImageQuality.value,
+        watermarkEnabled: currentImageModel.value.imageOptions?.watermarkEnabledDefault
+      }))
       const results = await Promise.all(tasks)
       imgResults.value = results
 
-      // Add to history
       results.forEach(res => {
         history.value.unshift({
           id: Math.random().toString(36).slice(2),
@@ -90,7 +118,6 @@ export const useGenerationStore = defineStore('generation', () => {
       
       videoResult.value = res
 
-      // Add to history
       history.value.unshift({
         id: Math.random().toString(36).slice(2),
         type: 'video',
@@ -116,32 +143,24 @@ export const useGenerationStore = defineStore('generation', () => {
   }
 
   return {
-    imgPrompt, imgSize, imgBatchSize, imgResults, imgLoading, imgError, canGenImg,
+    imgPrompt, imgModel, imgSize, imgBatchSize, imgResults, imgLoading, imgError, canGenImg,
+    currentImageModel, currentImageSizeOptions, imageModelOptions, imageModelPriceText,
     videoPrompt, videoImageUrl, videoResult, videoLoading, videoStatus, videoError, canGenVideo,
     history,
-    generateImage, generateVideo, sendToVideo, clearHistory
+    syncImageSizeWithModel, generateImage, generateVideo, sendToVideo, clearHistory
   }
 })
 
 export type PollDoneStatus = 'success' | 'fail' | 'pending'
 
 export interface PollingOptions {
-  /** 轮询间隔（ms），默认 3000 */
+  /** 间隔 ms */
   interval?: number
-  /** 最大轮询次数，默认 100 */
+  /** 最多尝试次数 */
   maxAttempts?: number
 }
 
-/**
- * 通用轮询 composable
- *
- * @param fetcher   每次轮询执行的请求函数
- * @param isDone    判断结果状态：success / fail / pending
- * @param options   interval & maxAttempts
- *
- * 提供 isLoading / attemptCount / lastError 响应式状态，
- * 到达 maxAttempts 自动停止并 reject。
- */
+/** isDone：success / fail / pending；超时 reject */
 export function usePolling<T>(
   fetcher: () => Promise<T>,
   isDone: (result: T) => PollDoneStatus,
@@ -162,7 +181,6 @@ export function usePolling<T>(
     }
   }
 
-  /** 开始轮询，返回 Promise<T>（最终成功的那次结果） */
   function start(): Promise<T> {
     stop()
     isLoading.value = true
@@ -195,7 +213,6 @@ export function usePolling<T>(
             lastError.value = new Error('任务执行失败')
             return reject(lastError.value)
           }
-          // 'pending' → 继续
         } catch (err) {
           stop()
           isLoading.value = false
@@ -206,7 +223,6 @@ export function usePolling<T>(
     })
   }
 
-  /** 手动停止并重置状态 */
   function cleanup() {
     stop()
     isLoading.value = false

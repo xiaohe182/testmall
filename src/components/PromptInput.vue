@@ -2,6 +2,7 @@
 const props = defineProps<{
   modelValue: string
   placeholder?: string
+  maxLength?: number
 }>()
 
 const emit = defineEmits<{
@@ -18,6 +19,7 @@ function onInput(e: Event) {
     <textarea
       :value="modelValue"
       :placeholder="placeholder || '描述你想生成的内容...'"
+      :maxlength="maxLength"
       class="prompt-input"
       rows="4"
       @input="onInput"
@@ -32,20 +34,19 @@ function onInput(e: Event) {
   min-height: 110px;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: none;
   background: rgba(255,255,255,0.02);
   color: var(--text-primary);
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+  transition: box-shadow var(--transition-fast), background-color var(--transition-fast);
   font-family: var(--font-main);
 }
 .prompt-input:focus {
   outline: none;
-  border-color: #1496f3;
-  box-shadow: 0 0 0 3px rgba(20, 150, 243, 0.08);
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.05);
+  box-shadow: 0 8px 28px rgba(20, 150, 243, 0.12);
 }
 .prompt-input::placeholder { color: var(--text-muted); }
 </style>

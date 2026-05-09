@@ -117,7 +117,7 @@ function onGallerySelect(prompt: string) {
   padding: 14px 0;
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: none;
   margin: 0 -24px;
   padding-left: 24px;
   padding-right: 24px;
@@ -141,7 +141,7 @@ function onGallerySelect(prompt: string) {
   gap: 2px;
   padding: 3px;
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  border: none;
   border-radius: 10px;
 }
 .tab-indicator {
@@ -152,7 +152,7 @@ function onGallerySelect(prompt: string) {
   height: calc(100% - 6px);
   border-radius: 8px;
   background: rgba(20, 150, 243, 0.1);
-  border: 1px solid rgba(20, 150, 243, 0.2);
+  border: none;
   box-shadow: 0 2px 12px rgba(20, 150, 243, 0.12);
   transition: transform var(--transition-normal);
 }
@@ -184,7 +184,7 @@ function onGallerySelect(prompt: string) {
   align-items: center;
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(20, 150, 243, 0.2);
+  border: none;
   background: rgba(20, 150, 243, 0.08);
   color: #1496f3;
   font-size: 11px;

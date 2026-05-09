@@ -3,22 +3,13 @@ import { ref } from 'vue'
 export type PollDoneStatus = 'success' | 'fail' | 'pending'
 
 export interface PollingOptions {
-  /** 轮询间隔（ms），默认 3000 */
+  /** 间隔 ms */
   interval?: number
-  /** 最大轮询次数，默认 100 */
+  /** 最多尝试次数 */
   maxAttempts?: number
 }
 
-/**
- * 通用轮询 composable
- *
- * @param fetcher   每次轮询执行的请求函数
- * @param isDone    判断结果状态：success / fail / pending
- * @param options   interval & maxAttempts
- *
- * 提供 isLoading / attemptCount / lastError 响应式状态，
- * 到达 maxAttempts 自动停止并 reject。
- */
+/** isDone：success / fail / pending；超时 reject */
 export function usePolling<T>(
   fetcher: () => Promise<T>,
   isDone: (result: T) => PollDoneStatus,
@@ -39,7 +30,6 @@ export function usePolling<T>(
     }
   }
 
-  /** 开始轮询，返回 Promise<T>（最终成功的那次结果） */
   function start(): Promise<T> {
     stop()
     isLoading.value = true
@@ -72,7 +62,6 @@ export function usePolling<T>(
             lastError.value = new Error('任务执行失败')
             return reject(lastError.value)
           }
-          // 'pending' → 继续
         } catch (err) {
           stop()
           isLoading.value = false
@@ -83,7 +72,6 @@ export function usePolling<T>(
     })
   }
 
-  /** 手动停止并重置状态 */
   function cleanup() {
     stop()
     isLoading.value = false

@@ -4,7 +4,6 @@ import { computed } from 'vue'
 const props = defineProps<{
   type?: 'img' | 'video'
   text?: string
-  /** 文生图骨架：与选中的 WxH 一致，如 1024x1024 */
   imgSize?: string
 }>()
 
@@ -64,7 +63,7 @@ const imgBlockStyle = computed(() =>
   border-radius: 16px;
   overflow: hidden;
   background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
+  border: none;
 }
 .sk-header {
   display: flex;
@@ -93,7 +92,6 @@ const imgBlockStyle = computed(() =>
 .sk-line.w80 { width: 80%; }
 .sk-line.w50 { width: 50%; }
 .sk-block {
-  /* 默认比例；文生图时由 imgSize 内联覆盖 */
   aspect-ratio: 4/3;
   display: flex;
   align-items: center;

@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useGenerationStore } from '@/stores/generation'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
 import ChipSelect from '@/components/ChipSelect.vue'
-import SkeletonCard from '@/components/SkeletonCard.vue'
 
 const store = useGenerationStore()
 const emit = defineEmits<{ switchToVideo: [] }>()
@@ -23,14 +21,6 @@ const presets = [
 function fillPreset(t: string) {
   store.imgPrompt = t
 }
-
-/** 与所选尺寸 WxH 一致的预览比例 */
-/** 比例仅作用在内层，外层边框不参与宽高比计算，避免「容器」视觉偏高/偏扁 */
-const imgAspectStyle = computed(() => {
-  const m = store.imgSize.match(/^(\d+)x(\d+)$/)
-  if (!m) return { aspectRatio: '1 / 1', width: '100%' }
-  return { aspectRatio: `${m[1]} / ${m[2]}`, width: '100%' }
-})
 </script>
 
 <template>
@@ -99,20 +89,28 @@ const imgAspectStyle = computed(() => {
         class="result-fill skeleton-grid"
         :class="{ 'cols-2': store.imgBatchSize > 1 }"
       >
-        <SkeletonCard
+        <div
           v-for="i in store.imgBatchSize"
           :key="i"
-          type="img"
-          :img-size="store.imgSize"
-          :text="`正在生成第 ${i} 张...`"
-        />
+          class="result-item loading-item"
+        >
+          <div class="img-preview">
+            <div class="img-wrap loading-media">
+              <div class="loading-spinner"></div>
+            </div>
+          </div>
+          <div class="action-bar loading-actions">
+            <span class="action-placeholder"></span>
+            <span class="action-placeholder accent"></span>
+          </div>
+        </div>
       </div>
 
       <!-- results grid -->
       <div v-else-if="store.imgResults.length > 0" class="result-fill result-grid" :class="{ single: store.imgResults.length === 1 }">
         <div v-for="(item, idx) in store.imgResults" :key="idx" class="result-item">
           <div class="img-preview">
-            <div class="img-wrap" :style="imgAspectStyle">
+            <div class="img-wrap">
               <img :src="item.url" alt="生成图片" class="result-img" />
             </div>
           </div>
@@ -144,11 +142,11 @@ const imgAspectStyle = computed(() => {
 </template>
 
 <style scoped>
-/* flex 行布局 + stretch：两侧栏始终同高 */
+/* 左侧操作栏保持自身高度，右侧加载/结果不再把它撑高 */
 .t2i-wrap {
   display: flex;
   flex-direction: row;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 28px;
 }
 .input-area {
@@ -188,7 +186,7 @@ const imgAspectStyle = computed(() => {
   padding: 24px;
   backdrop-filter: blur(16px);
   transition: border-color var(--transition-fast), transform var(--transition-normal);
-  flex: 1;
+  flex: none;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -270,7 +268,7 @@ const imgAspectStyle = computed(() => {
   box-shadow: 0 0 10px rgba(20, 150, 243, 0.1);
 }
 
-/* result area：与左侧操作栏同高（flex 子项 stretch） */
+/* result area */
 .result-area {
   flex: 1;
   min-width: 0;
@@ -287,12 +285,12 @@ const imgAspectStyle = computed(() => {
   width: 100%;
 }
 
-/* skeleton grid：列数与生成结果一致，避免加载完成瞬间改栏宽 */
+/* loading grid：列数与生成结果一致，避免加载完成瞬间改栏宽/改高度 */
 .skeleton-grid {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 20px;
   align-content: start;
   justify-items: stretch;
 }
@@ -325,11 +323,47 @@ const imgAspectStyle = computed(() => {
 .img-wrap {
   position: relative;
   width: 100%;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .result-img {
-  width: 100%; height: 100%; object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
   display: block;
+}
+
+.loading-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(110deg, rgba(99,102,241,0.04) 30%, rgba(99,102,241,0.1) 50%, rgba(99,102,241,0.04) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid rgba(20, 150, 243, 0.18);
+  border-top-color: rgba(20, 150, 243, 0.9);
+  animation: spin 0.8s linear infinite;
+}
+.action-placeholder {
+  flex: 1;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.action-placeholder.accent {
+  background: rgba(20, 150, 243, 0.08);
+  border-color: rgba(20, 150, 243, 0.12);
 }
 
 .action-bar {
@@ -392,5 +426,14 @@ const imgAspectStyle = computed(() => {
 
 .result-fill.empty-wrap {
   justify-content: center;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>

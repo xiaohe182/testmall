@@ -21,7 +21,7 @@ defineEmits<{ click: [] }>()
   padding: 14px;
   border: none;
   border-radius: 14px;
-  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+  background: var(--accent-indigo);
   color: white;
   font-size: 15px;
   font-weight: 700;
@@ -34,6 +34,7 @@ defineEmits<{ click: [] }>()
   font-family: var(--font-main);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 14px 0 rgba(20, 150, 243, 0.39);
 }
 .gen-btn::before {
   content: '';

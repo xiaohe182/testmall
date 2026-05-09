@@ -1,156 +1,216 @@
-import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { defineStore } from 'pinia'
 import { genImg, type ImgResult } from '@/api/img'
 import { submitVideo, fetchVideoTask, type VideoResult } from '@/api/video'
-import { usePolling } from '@/composables/usePolling'
 
-// ──── 历史记录类型 ────
-
-export interface HistoryItem {
+export type HistoryItem = {
   id: string
   type: 'img' | 'video'
-  prompt: string
   url: string
-  coverUrl?: string
+  cover_image_url?: string
+  prompt: string
   timestamp: number
 }
 
 export const useGenerationStore = defineStore('generation', () => {
-
-  // ──── 文生图状态 ────
-
+  // --- Image States ---
   const imgPrompt = ref('')
   const imgSize = ref('1024x1024')
-  const imgLoading = ref(false)
-  const imgResults = ref<ImgResult[]>([])
-  const imgError = ref<string | null>(null)
   const imgBatchSize = ref(1)
+  const imgResults = ref<ImgResult[]>([])
+  const imgLoading = ref(false)
+  const imgError = ref<string | null>(null)
 
+  // --- Video States ---
+  const videoPrompt = ref('')
+  const videoImageUrl = ref('')
+  const videoResult = ref<VideoResult | null>(null)
+  const videoLoading = ref(false)
+  const videoStatus = ref('')
+  const videoError = ref<string | null>(null)
+
+  // --- Common States ---
+  const history = ref<HistoryItem[]>([])
+
+  // --- Getters ---
   const canGenImg = computed(() => imgPrompt.value.trim().length > 0)
+  const canGenVideo = computed(() => videoImageUrl.value.length > 0)
 
+  // --- Actions ---
   async function generateImage() {
-    if (!canGenImg.value || imgLoading.value) return
+    if (!canGenImg.value) return
     imgLoading.value = true
-    imgResults.value = []
     imgError.value = null
+    imgResults.value = []
 
     try {
-      const tasks = Array.from({ length: imgBatchSize.value }, () =>
-        genImg(imgPrompt.value, imgSize.value)
-      )
-      const results = await Promise.allSettled(tasks)
+      // 模拟批量生成逻辑，实际 API 可能是单次调用
+      const tasks = Array.from({ length: imgBatchSize.value }).map(() => genImg(imgPrompt.value, imgSize.value))
+      const results = await Promise.all(tasks)
+      imgResults.value = results
 
-      const succeeded = results
-        .filter((r): r is PromiseFulfilledResult<ImgResult> => r.status === 'fulfilled')
-        .map(r => r.value)
-
-      if (succeeded.length === 0) {
-        const firstFail = results.find(r => r.status === 'rejected')
-        throw (firstFail as PromiseRejectedResult)?.reason
-      }
-
-      imgResults.value = succeeded
-
-      // 写入历史
-      succeeded.forEach(r => {
+      // Add to history
+      results.forEach(res => {
         history.value.unshift({
-          id: crypto.randomUUID(),
+          id: Math.random().toString(36).slice(2),
           type: 'img',
+          url: res.url,
           prompt: imgPrompt.value,
-          url: r.url,
           timestamp: Date.now()
         })
       })
-    } catch (e: any) {
-      imgError.value = extractErrorMsg(e, '图片生成失败')
+    } catch (err: any) {
+      imgError.value = err.message || '生成图片失败'
     } finally {
       imgLoading.value = false
     }
   }
 
-  // ──── 图生视频状态 ────
-
-  const videoPrompt = ref('')
-  const videoImageUrl = ref('')
-  const videoStatus = ref('')
-  const videoResult = ref<VideoResult | null>(null)
-  const videoError = ref<string | null>(null)
-
-  let currentTaskId = ''
-
-  const canGenVideo = computed(
-    () => videoImageUrl.value.trim().length > 0 && videoPrompt.value.trim().length > 0
-  )
-
-  const videoPolling = usePolling(
-    () => fetchVideoTask(currentTaskId),
-    (res) => {
-      if (res.task_status === 'SUCCESS') return 'success'
-      if (res.task_status === 'FAIL') return 'fail'
-      return 'pending'
-    },
-    { interval: 3000, maxAttempts: 100 }
-  )
-
-  const videoLoading = computed(() => videoPolling.isLoading.value)
-
   async function generateVideo() {
-    if (!canGenVideo.value || videoPolling.isLoading.value) return
-    videoResult.value = null
+    if (!canGenVideo.value) return
+    videoLoading.value = true
     videoError.value = null
+    videoResult.value = null
     videoStatus.value = '提交任务中...'
 
     try {
-      currentTaskId = await submitVideo(videoPrompt.value, videoImageUrl.value)
-      videoStatus.value = '视频生成中，请耐心等待...'
+      const taskId = await submitVideo(videoPrompt.value, videoImageUrl.value)
+      
+      const poll = usePolling(
+        () => fetchVideoTask(taskId),
+        (res) => res.task_status === 'SUCCESS' ? 'success' : (res.task_status === 'FAIL' ? 'fail' : 'pending'),
+        { interval: 3000 }
+      )
 
-      const taskResult = await videoPolling.start()
-      videoResult.value = taskResult.video_result![0]
+      videoStatus.value = '视频生成中...'
+      const finalTask = await poll.start()
+      const res = finalTask.video_result?.[0]
 
-      // 写入历史
+      if (!res) throw new Error('未获取到视频结果')
+      
+      videoResult.value = res
+
+      // Add to history
       history.value.unshift({
-        id: crypto.randomUUID(),
+        id: Math.random().toString(36).slice(2),
         type: 'video',
+        url: res.url,
+        cover_image_url: res.cover_image_url,
         prompt: videoPrompt.value,
-        url: taskResult.video_result![0].url,
-        coverUrl: taskResult.video_result![0].cover_image_url,
         timestamp: Date.now()
       })
-    } catch (e: any) {
-      videoError.value = extractErrorMsg(e, '视频生成失败')
+    } catch (err: any) {
+      videoError.value = err.message || '生成视频失败'
     } finally {
+      videoLoading.value = false
       videoStatus.value = ''
     }
   }
-
-  // ──── 历史记录 ────
-
-  const history = ref<HistoryItem[]>([])
-
-  function clearHistory() {
-    history.value = []
-  }
-
-  // ──── 跨模块 ────
 
   function sendToVideo(url: string) {
     videoImageUrl.value = url
   }
 
-  // ──── 工具函数 ────
-
-  function extractErrorMsg(e: any, fallback: string): string {
-    return e?.response?.data?.error?.message || e?.message || fallback
+  function clearHistory() {
+    history.value = []
   }
 
   return {
-    imgPrompt, imgSize, imgLoading, imgResults, imgError, imgBatchSize,
-    canGenImg, generateImage,
-
-    videoPrompt, videoImageUrl, videoStatus, videoResult, videoError,
-    videoLoading, canGenVideo, generateVideo,
-
-    history, clearHistory,
-    sendToVideo
+    imgPrompt, imgSize, imgBatchSize, imgResults, imgLoading, imgError, canGenImg,
+    videoPrompt, videoImageUrl, videoResult, videoLoading, videoStatus, videoError, canGenVideo,
+    history,
+    generateImage, generateVideo, sendToVideo, clearHistory
   }
 })
+
+export type PollDoneStatus = 'success' | 'fail' | 'pending'
+
+export interface PollingOptions {
+  /** 轮询间隔（ms），默认 3000 */
+  interval?: number
+  /** 最大轮询次数，默认 100 */
+  maxAttempts?: number
+}
+
+/**
+ * 通用轮询 composable
+ *
+ * @param fetcher   每次轮询执行的请求函数
+ * @param isDone    判断结果状态：success / fail / pending
+ * @param options   interval & maxAttempts
+ *
+ * 提供 isLoading / attemptCount / lastError 响应式状态，
+ * 到达 maxAttempts 自动停止并 reject。
+ */
+export function usePolling<T>(
+  fetcher: () => Promise<T>,
+  isDone: (result: T) => PollDoneStatus,
+  options: PollingOptions = {}
+) {
+  const { interval = 3000, maxAttempts = 100 } = options
+
+  const isLoading = ref(false)
+  const attemptCount = ref(0)
+  const lastError = ref<Error | null>(null)
+
+  let timer: ReturnType<typeof setInterval> | null = null
+
+  function stop() {
+    if (timer !== null) {
+      clearInterval(timer)
+      timer = null
+    }
+  }
+
+  /** 开始轮询，返回 Promise<T>（最终成功的那次结果） */
+  function start(): Promise<T> {
+    stop()
+    isLoading.value = true
+    attemptCount.value = 0
+    lastError.value = null
+
+    return new Promise<T>((resolve, reject) => {
+      timer = setInterval(async () => {
+        attemptCount.value++
+
+        if (attemptCount.value > maxAttempts) {
+          stop()
+          isLoading.value = false
+          lastError.value = new Error(`轮询超时（已尝试 ${maxAttempts} 次）`)
+          return reject(lastError.value)
+        }
+
+        try {
+          const result = await fetcher()
+          const status = isDone(result)
+
+          if (status === 'success') {
+            stop()
+            isLoading.value = false
+            return resolve(result)
+          }
+          if (status === 'fail') {
+            stop()
+            isLoading.value = false
+            lastError.value = new Error('任务执行失败')
+            return reject(lastError.value)
+          }
+          // 'pending' → 继续
+        } catch (err) {
+          stop()
+          isLoading.value = false
+          lastError.value = err instanceof Error ? err : new Error(String(err))
+          return reject(lastError.value)
+        }
+      }, interval)
+    })
+  }
+
+  /** 手动停止并重置状态 */
+  function cleanup() {
+    stop()
+    isLoading.value = false
+  }
+
+  return { start, stop, cleanup, isLoading, attemptCount, lastError }
+}

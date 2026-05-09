@@ -38,13 +38,13 @@ function onInput(e: Event) {
   font-size: 14px;
   line-height: 1.6;
   resize: vertical;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
   font-family: var(--font-main);
 }
 .prompt-input:focus {
   outline: none;
-  border-color: rgba(99,102,241,0.4);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+  border-color: #1496f3;
+  box-shadow: 0 0 0 3px rgba(20, 150, 243, 0.08);
   background: rgba(255,255,255,0.04);
 }
 .prompt-input::placeholder { color: var(--text-muted); }

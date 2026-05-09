@@ -6,6 +6,8 @@ import TextToImg from '@/components/TextToImg.vue'
 import ImgToVideo from '@/components/ImgToVideo.vue'
 import HistoryPanel from '@/components/HistoryPanel.vue'
 import BeamGallery from '@/components/BeamGallery.vue'
+import LongImgGallery from '@/components/LongImgGallery.vue'
+import VideoGallery from '@/components/VideoGallery.vue'
 
 type Tab = 'img' | 'video'
 
@@ -72,6 +74,28 @@ function onGallerySelect(prompt: string) {
       <BeamGallery @select="onGallerySelect" />
     </div>
 
+    <div class="bottom-gallery fade-up" style="animation-delay:.3s">
+      <div class="section-head">
+        <div>
+          <span class="section-kicker">案例精选</span>
+          <h2>全场景视觉展示</h2>
+        </div>
+        <p>纵览高品质设计全貌，感受极简交互带来的流畅视野。</p>
+      </div>
+      <LongImgGallery />
+    </div>
+
+    <div class="bottom-gallery fade-up" style="animation-delay:.35s">
+      <div class="section-head">
+        <div>
+          <span class="section-kicker">动态预览</span>
+          <h2>多维度创作呈现</h2>
+        </div>
+        <p>鼠标悬停即可预览动态视频，直观感受画面的生命力。</p>
+      </div>
+      <VideoGallery />
+    </div>
+
     <footer class="ft fade-up" style="animation-delay:.2s">
       <div class="ft-line"></div>
       <p>小竹熊 · AI 图片与视频创作台</p>
@@ -108,7 +132,7 @@ function onGallerySelect(prompt: string) {
 .nav-logo {
   height: 32px;
   flex-shrink: 0;
-  filter: drop-shadow(0 1px 4px rgba(99,102,241,0.2));
+  filter: drop-shadow(0 1px 4px rgba(20, 150, 243, 0.2));
 }
 
 .tab-track {
@@ -127,9 +151,9 @@ function onGallerySelect(prompt: string) {
   width: calc(50% - 3px);
   height: calc(100% - 6px);
   border-radius: 8px;
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1));
-  border: 1px solid rgba(99,102,241,0.2);
-  box-shadow: 0 2px 12px rgba(99,102,241,0.12);
+  background: rgba(20, 150, 243, 0.1);
+  border: 1px solid rgba(20, 150, 243, 0.2);
+  box-shadow: 0 2px 12px rgba(20, 150, 243, 0.12);
   transition: transform var(--transition-normal);
 }
 .tab-indicator.right {
@@ -160,9 +184,9 @@ function onGallerySelect(prompt: string) {
   align-items: center;
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(99,102,241,0.18);
-  background: rgba(99,102,241,0.08);
-  color: #c7c9ff;
+  border: 1px solid rgba(20, 150, 243, 0.2);
+  background: rgba(20, 150, 243, 0.08);
+  color: #1496f3;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -196,7 +220,7 @@ function onGallerySelect(prompt: string) {
 }
 .ft-line {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.15), rgba(168,85,247,0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(20, 150, 243, 0.2), transparent);
   margin-bottom: 20px;
 }
 .ft p {

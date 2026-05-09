@@ -1,8 +1,23 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   type?: 'img' | 'video'
   text?: string
+  /** 文生图骨架：与选中的 WxH 一致，如 1024x1024 */
+  imgSize?: string
 }>()
+
+function parseImgAspect(size?: string): string {
+  if (!size) return '4 / 3'
+  const m = size.match(/^(\d+)x(\d+)$/)
+  if (!m) return '4 / 3'
+  return `${m[1]} / ${m[2]}`
+}
+
+const imgBlockStyle = computed(() =>
+  props.type === 'video' ? undefined : { aspectRatio: parseImgAspect(props.imgSize) }
+)
 </script>
 
 <template>
@@ -15,7 +30,7 @@ defineProps<{
           <div class="sk-line w40"></div>
         </div>
       </div>
-      <div class="sk-block" :class="{ video: type === 'video' }">
+      <div class="sk-block" :class="{ video: type === 'video' }" :style="imgBlockStyle">
         <div v-if="type === 'video'" class="sk-play">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -78,6 +93,7 @@ defineProps<{
 .sk-line.w80 { width: 80%; }
 .sk-line.w50 { width: 50%; }
 .sk-block {
+  /* 默认比例；文生图时由 imgSize 内联覆盖 */
   aspect-ratio: 4/3;
   display: flex;
   align-items: center;

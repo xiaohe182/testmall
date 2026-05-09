@@ -20,7 +20,6 @@ const pairs = [
 
 <template>
   <div class="gallery">
-    <p class="gallery-note">左右画面对比展示风格变化，点击任意卡片即可把提示词带入文生图。</p>
     <div class="row">
       <div
         v-for="pair in pairs"
@@ -46,12 +45,6 @@ const pairs = [
 <style scoped>
 .gallery {
   width: 100%;
-}
-.gallery-note {
-  margin-bottom: 14px;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.7;
 }
 
 .row {

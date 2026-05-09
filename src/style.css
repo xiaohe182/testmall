@@ -16,8 +16,17 @@
   --text-primary: #f0f0f5;
   --text-secondary: #a0a0b8;
   --text-muted: #6b6b80;
-  --accent-indigo: #6366f1;
+  --accent-indigo: #1496f3;
   --accent-purple: #a855f7;
+  --accent-blue-glow: rgba(20, 150, 243, 0.3);
+  --accent-blue-soft: rgba(20, 150, 243, 0.1);
+  
+  /* card common */
+  --card-bg: rgba(255, 255, 255, 0.02);
+  --card-border: rgba(255, 255, 255, 0.06);
+  --card-radius: 20px;
+  --card-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.4);
+  --card-glow-hover: 0 0 20px rgba(20, 150, 243, 0.2);
   --accent-pink: #ec4899;
   --accent-cyan: #06b6d4;
   --gradient-main: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
@@ -56,9 +65,9 @@ body::before {
   right: 0;
   bottom: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(99, 102, 241, 0.12), transparent),
+    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(20, 150, 243, 0.12), transparent),
     radial-gradient(ellipse 60% 40% at 80% 50%, rgba(168, 85, 247, 0.06), transparent),
-    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(236, 72, 153, 0.04), transparent);
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(20, 150, 243, 0.04), transparent);
   pointer-events: none;
   z-index: 0;
 }

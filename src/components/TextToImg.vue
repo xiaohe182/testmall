@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGenerationStore } from '@/stores/generation'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
@@ -22,6 +23,14 @@ const presets = [
 function fillPreset(t: string) {
   store.imgPrompt = t
 }
+
+/** 与所选尺寸 WxH 一致的预览比例 */
+/** 比例仅作用在内层，外层边框不参与宽高比计算，避免「容器」视觉偏高/偏扁 */
+const imgAspectStyle = computed(() => {
+  const m = store.imgSize.match(/^(\d+)x(\d+)$/)
+  if (!m) return { aspectRatio: '1 / 1', width: '100%' }
+  return { aspectRatio: `${m[1]} / ${m[2]}`, width: '100%' }
+})
 </script>
 
 <template>
@@ -47,11 +56,11 @@ function fillPreset(t: string) {
           placeholder="描述你想生成的图片内容，越详细效果越好..."
         />
 
-        <div class="presets" v-if="!store.imgLoading">
+        <div class="presets">
           <span class="label">灵感提示</span>
           <div class="presets-list">
-            <button v-for="p in presets" :key="p" class="chip" @click="fillPreset(p)">
-              {{ p.slice(0, 14) }}...
+            <button v-for="p in presets" :key="p" class="chip" @click="fillPreset(p)" :disabled="store.imgLoading">
+              {{ p }}
             </button>
           </div>
         </div>
@@ -71,34 +80,45 @@ function fillPreset(t: string) {
           </div>
         </div>
 
-        <GenButton
-          :disabled="!store.canGenImg || store.imgLoading"
-          :loading="store.imgLoading"
-          text="生成图片"
-          @click="store.generateImage()"
-        />
+        <div class="card-actions">
+          <GenButton
+            :disabled="!store.canGenImg || store.imgLoading"
+            :loading="store.imgLoading"
+            text="生成图片"
+            @click="store.generateImage()"
+          />
+        </div>
       </div>
     </div>
 
     <!-- RESULT AREA -->
     <div class="result-area">
       <!-- loading -->
-      <div v-if="store.imgLoading" class="skeleton-grid">
+      <div
+        v-if="store.imgLoading"
+        class="result-fill skeleton-grid"
+        :class="{ 'cols-2': store.imgBatchSize > 1 }"
+      >
         <SkeletonCard
           v-for="i in store.imgBatchSize"
           :key="i"
           type="img"
+          :img-size="store.imgSize"
           :text="`正在生成第 ${i} 张...`"
         />
       </div>
 
       <!-- results grid -->
-      <div v-else-if="store.imgResults.length > 0" class="result-grid" :class="{ single: store.imgResults.length === 1 }">
-        <div v-for="(item, idx) in store.imgResults" :key="idx" class="img-wrap">
-          <img :src="item.url" alt="生成图片" class="result-img" />
-          <div class="img-hover">
-            <a :href="item.url" target="_blank" class="hover-btn">查看原图</a>
-            <button class="hover-btn accent" @click="store.sendToVideo(item.url); emit('switchToVideo')">
+      <div v-else-if="store.imgResults.length > 0" class="result-fill result-grid" :class="{ single: store.imgResults.length === 1 }">
+        <div v-for="(item, idx) in store.imgResults" :key="idx" class="result-item">
+          <div class="img-preview">
+            <div class="img-wrap" :style="imgAspectStyle">
+              <img :src="item.url" alt="生成图片" class="result-img" />
+            </div>
+          </div>
+          <div class="action-bar">
+            <a :href="item.url" target="_blank" download class="action-btn">下载原图</a>
+            <button class="action-btn accent" @click="store.sendToVideo(item.url); emit('switchToVideo')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>
@@ -108,7 +128,7 @@ function fillPreset(t: string) {
         </div>
       </div>
 
-      <div v-else class="empty-wrap">
+      <div v-else class="result-fill empty-wrap">
         <div class="empty-inner">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -124,162 +144,236 @@ function fillPreset(t: string) {
 </template>
 
 <style scoped>
+/* flex 行布局 + stretch：两侧栏始终同高 */
 .t2i-wrap {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 28px;
+  display: flex;
+  flex-direction: row;
   align-items: stretch;
+  gap: 28px;
+}
+.input-area {
+  flex: 0 0 380px;
+  width: 380px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 @media (max-width: 860px) {
-  .t2i-wrap { grid-template-columns: 1fr; }
+  .t2i-wrap {
+    flex-direction: column;
+  }
+  .input-area {
+    flex: none;
+    width: 100%;
+  }
+  .card { flex: none; }
+  .result-area {
+    flex: none;
+    width: 100%;
+  }
+}
+
+.card-actions {
+  margin-top: auto;
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
 /* card */
 .card {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
   padding: 24px;
   backdrop-filter: blur(16px);
-  transition: all var(--transition-normal);
-  position: sticky;
-  top: 70px;
-  align-self: start;
+  transition: border-color var(--transition-fast), transform var(--transition-normal);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
-.card:hover { border-color: rgba(99,102,241,0.12); }
+.card:hover { border-color: var(--accent-blue-glow); }
 .card-head {
   display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
 }
 .card-icon {
   width: 34px; height: 34px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1));
-  color: var(--accent-indigo); flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(20, 150, 243, 0.15), rgba(168, 85, 247, 0.1));
+  color: #1496f3; flex-shrink: 0;
 }
 .head-text { flex: 1; }
 .card-title { font-size: 14px; font-weight: 700; line-height: 1.2; }
 .card-hint { font-size: 11px; color: var(--text-muted); }
 
 /* presets */
-.presets { margin-bottom: 14px; }
+.presets { margin-bottom: 24px; width: 100%; }
 .label {
-  font-size: 11px; color: var(--text-muted);
-  font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.06em; margin-bottom: 8px; display: block;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+  display: block;
 }
-.presets-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.presets-list { 
+  display: flex; 
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
 .chip {
-  padding: 4px 10px; border-radius: 100px;
+  width: 100%;
+  padding: 5px 12px; border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.06);
   background: rgba(255,255,255,0.02);
   color: var(--text-secondary);
-  font-size: 11px; cursor: pointer;
+  font-size: 12px;
+  line-height: 1.35;
+  cursor: pointer;
   transition: all var(--transition-fast);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .chip:hover {
-  border-color: rgba(99,102,241,0.3);
-  color: var(--accent-indigo);
-  background: rgba(99,102,241,0.06);
+  border-color: #1496f3;
+  color: #1496f3;
+  background: rgba(20, 150, 243, 0.1);
 }
 
 /* batch */
 .batch-row { margin-bottom: 18px; }
-.batch-opts { display: flex; gap: 6px; }
+.batch-opts { display: flex; gap: 8px; }
 .batch-chip {
-  padding: 5px 14px; border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.02);
-  color: var(--text-secondary);
-  font-size: 12px; cursor: pointer;
-  transition: all var(--transition-fast);
+  padding: 6px 14px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgb(18, 18, 20);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px; cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(--font-main);
+  font-weight: 500;
 }
-.batch-chip:hover {
-  border-color: rgba(99,102,241,0.3);
-  color: var(--accent-indigo);
+.batch-chip:hover:not(.active) {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 .batch-chip.active {
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1));
-  border-color: rgba(99,102,241,0.3);
-  color: var(--accent-indigo);
+  border-color: #1496f3;
+  background: rgba(20, 150, 243, 0.1);
+  color: #1496f3;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(20, 150, 243, 0.1);
 }
 
-/* result area */
+/* result area：与左侧操作栏同高（flex 子项 stretch） */
 .result-area {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  flex-direction: column;
+  min-height: 0;
+}
+.result-fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
+  width: 100%;
 }
 
-/* skeleton grid */
+/* skeleton grid：列数与生成结果一致，避免加载完成瞬间改栏宽 */
 .skeleton-grid {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
+  align-content: start;
+  justify-items: stretch;
+}
+.skeleton-grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
 }
 
-/* result grid */
+/* results grid：始终占满右侧栏宽；单张不再收窄居中，避免与空态/骨架宽度不一致 */
 .result-grid {
-  width: 100%;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 20px;
+  align-content: start;
 }
 .result-grid.single {
   grid-template-columns: 1fr;
 }
-
+.result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.img-preview {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  overflow: hidden;
+}
 .img-wrap {
   position: relative;
-  border-radius: 16px;
+  width: 100%;
   overflow: hidden;
-  background: var(--bg-secondary);
-  box-shadow: 0 6px 32px rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.04);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
-.img-wrap:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+.result-img {
+  width: 100%; height: 100%; object-fit: contain;
+  display: block;
 }
-.result-img { width: 100%; display: block; }
-.img-hover {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(6px);
-  display: flex; gap: 8px;
-  align-items: center; justify-content: center;
-  opacity: 0; transition: opacity var(--transition-normal);
+
+.action-bar {
+  display: flex;
+  gap: 8px;
 }
-.img-wrap:hover .img-hover { opacity: 1; }
-.hover-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 8px 16px; border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.08);
-  color: white; font-size: 12px; font-weight: 600;
-  cursor: pointer; text-decoration: none;
+.action-btn {
+  flex: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
   transition: all var(--transition-fast);
-  font-family: var(--font-main);
 }
-.hover-btn:hover {
-  background: rgba(255,255,255,0.15);
-  border-color: rgba(255,255,255,0.4);
+.action-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-primary);
 }
-.hover-btn.accent {
-  background: linear-gradient(135deg, rgba(99,102,241,0.5), rgba(168,85,247,0.5));
-  border-color: rgba(99,102,241,0.4);
+.action-btn.accent {
+  background: var(--accent-blue-soft);
+  border-color: rgba(20, 150, 243, 0.2);
+  color: var(--accent-indigo);
 }
-.hover-btn.accent:hover {
-  background: linear-gradient(135deg, rgba(99,102,241,0.7), rgba(168,85,247,0.7));
+.action-btn.accent:hover {
+  background: rgba(20, 150, 243, 0.15);
+  border-color: var(--accent-blue-glow);
 }
 
 .empty-wrap {
   width: 100%;
-  height: 100%;
-  min-height: 480px;
+  flex: 1;
+  min-height: 200px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   border-radius: 20px;
@@ -289,9 +383,14 @@ function fillPreset(t: string) {
 .empty-inner {
   text-align: center;
   color: var(--text-muted);
+  max-width: 280px;
 }
 .empty-inner p {
   margin-top: 12px;
   font-size: 14px;
+}
+
+.result-fill.empty-wrap {
+  justify-content: center;
 }
 </style>

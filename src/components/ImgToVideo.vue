@@ -163,33 +163,36 @@ onUnmounted(() => {
           />
         </div>
 
-        <!-- submit -->
-        <GenButton
-          :disabled="!store.canGenVideo || store.videoLoading"
-          :loading="store.videoLoading"
-          :text="store.videoLoading ? store.videoStatus || '生成中...' : '生成视频'"
-          @click="store.generateVideo()"
-        />
+        <div class="card-actions">
+          <GenButton
+            :disabled="!store.canGenVideo || store.videoLoading"
+            :loading="store.videoLoading"
+            :text="store.videoLoading ? store.videoStatus || '生成中...' : '生成视频'"
+            @click="store.generateVideo()"
+          />
+        </div>
       </div>
     </div>
 
     <!-- RESULT AREA -->
     <div class="result-area">
       <!-- loading -->
-      <div v-if="store.videoLoading" class="skeleton-grid">
+      <div v-if="store.videoLoading" class="result-fill skeleton-grid">
         <SkeletonCard type="video" :text="store.videoStatus || '视频生成中...'" />
       </div>
 
       <!-- video result -->
-      <div v-else-if="store.videoResult" class="video-result animate-enter">
-        <div class="video-wrap">
-          <video
-            :src="store.videoResult.url"
-            :poster="store.videoResult.cover_image_url"
-            controls
-            loop
-            class="result-video"
-          />
+      <div v-else-if="store.videoResult" class="result-fill video-result animate-enter">
+        <div class="video-preview">
+          <div class="video-wrap">
+            <video
+              :src="store.videoResult.url"
+              :poster="store.videoResult.cover_image_url"
+              controls
+              loop
+              class="result-video"
+            />
+          </div>
         </div>
         <div class="video-actions">
           <a :href="store.videoResult.url" target="_blank" class="action-btn">
@@ -205,7 +208,7 @@ onUnmounted(() => {
       </div>
 
       <!-- error -->
-      <div v-else-if="store.videoError" class="error-wrap">
+      <div v-else-if="store.videoError" class="result-fill error-wrap">
         <div class="error-inner">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -220,7 +223,7 @@ onUnmounted(() => {
       </div>
 
       <!-- empty -->
-      <div v-else class="empty-wrap">
+      <div v-else class="result-fill empty-wrap">
         <div class="empty-inner">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -234,14 +237,40 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* flex 行布局 + stretch：两侧栏始终同高（grid + height:100% 在父高为 auto 时常失效） */
 .i2v-wrap {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 28px;
+  display: flex;
+  flex-direction: row;
   align-items: stretch;
+  gap: 28px;
+}
+.input-area {
+  flex: 0 0 380px;
+  width: 380px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 @media (max-width: 860px) {
-  .i2v-wrap { grid-template-columns: 1fr; }
+  .i2v-wrap {
+    flex-direction: column;
+  }
+  .input-area {
+    flex: none;
+    width: 100%;
+  }
+  .card { flex: none; }
+  .result-area {
+    flex: none;
+    width: 100%;
+  }
+}
+
+.card-actions {
+  margin-top: auto;
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
 /* card */
@@ -251,31 +280,36 @@ onUnmounted(() => {
   border-radius: 20px;
   padding: 24px;
   backdrop-filter: blur(16px);
-  transition: all var(--transition-normal);
-  position: sticky;
-  top: 70px;
-  align-self: start;
+  transition: border-color var(--transition-fast), transform var(--transition-normal);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
-.card:hover { border-color: rgba(99,102,241,0.12); }
+.card:hover { border-color: rgba(20, 150, 243, 0.2); }
 .card-head {
   display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
 }
 .card-icon {
   width: 34px; height: 34px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1));
-  color: var(--accent-indigo); flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(20, 150, 243, 0.15), rgba(168, 85, 247, 0.1));
+  color: #1496f3; flex-shrink: 0;
 }
 .head-text { flex: 1; }
 .card-title { font-size: 14px; font-weight: 700; line-height: 1.2; margin: 0; }
 .card-hint { font-size: 11px; color: var(--text-muted); }
 
 /* form group */
-.form-group { margin-bottom: 18px; }
+.form-group { margin-bottom: 24px; }
 .label {
-  font-size: 11px; color: var(--text-muted);
-  font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.06em; margin-bottom: 8px; display: block;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
+  display: block;
 }
 
 /* source image preview */
@@ -320,20 +354,20 @@ onUnmounted(() => {
   transition: all var(--transition-fast);
 }
 .drop-zone:hover {
-  border-color: rgba(99,102,241,0.3);
-  background: rgba(99,102,241,0.03);
+  border-color: rgba(20, 150, 243, 0.3);
+  background: rgba(20, 150, 243, 0.03);
 }
 .drop-zone.active {
-  border-color: rgba(99,102,241,0.5);
-  background: rgba(99,102,241,0.06);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+  border-color: rgba(20, 150, 243, 0.5);
+  background: rgba(20, 150, 243, 0.06);
+  box-shadow: 0 0 0 3px rgba(20, 150, 243, 0.08);
 }
 .drop-zone svg {
   color: var(--text-muted); opacity: 0.4;
   transition: all var(--transition-fast);
 }
-.drop-zone:hover svg { opacity: 0.7; color: var(--accent-indigo); }
-.drop-zone.active svg { opacity: 1; color: var(--accent-indigo); }
+.drop-zone:hover svg { opacity: 0.7; color: #1496f3; }
+.drop-zone.active svg { opacity: 1; color: #1496f3; }
 
 .drop-title {
   font-size: 13px; color: var(--text-secondary);
@@ -357,17 +391,26 @@ onUnmounted(() => {
 }
 .url-input:focus {
   outline: none;
-  border-color: rgba(99,102,241,0.3);
+  border-color: rgba(20, 150, 243, 0.3);
 }
 .url-input::placeholder { color: var(--text-muted); }
 
 .hidden-input { display: none; }
 
-/* result area */
+/* result area：与左侧操作栏同高（flex 子项 stretch） */
 .result-area {
-  display: flex; flex-direction: column;
-  align-items: flex-start; justify-content: flex-start;
-  min-height: 400px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.result-fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
   width: 100%;
 }
 
@@ -375,7 +418,10 @@ onUnmounted(() => {
 .skeleton-grid { width: 100%; }
 .skeleton-grid > * { width: 100%; border-radius: 16px; }
 
-/* video result */
+/* video result：与空态同为顶部起始，避免生成完成后整块垂直偏移 */
+.video-result.result-fill {
+  justify-content: flex-start;
+}
 .animate-enter {
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -384,18 +430,29 @@ onUnmounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.video-result { width: 100%; }
-.video-wrap {
+.video-result { width: 100%; flex-shrink: 0; }
+
+/* 外层边框不参与 16:9 占位，避免容器比例与骨架屏不一致 */
+.video-preview {
+  width: 100%;
   border-radius: 16px;
   overflow: hidden;
-  background: #000;
   border: 1px solid rgba(255,255,255,0.04);
   box-shadow: 0 6px 32px rgba(0,0,0,0.2);
+  background: #000;
+}
+.video-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .result-video {
   width: 100%;
+  height: 100%;
+  max-height: 100%;
   display: block;
-  max-height: 560px;
   object-fit: contain;
 }
 
@@ -420,7 +477,8 @@ onUnmounted(() => {
 /* error */
 .error-wrap {
   width: 100%;
-  min-height: 360px;
+  min-height: 0;
+  flex: 1;
   display: flex; align-items: center; justify-content: center;
   border-radius: 16px;
   border: 1px solid rgba(255,80,80,0.15);
@@ -454,9 +512,12 @@ onUnmounted(() => {
 /* empty */
 .empty-wrap {
   width: 100%;
-  height: 100%;
-  min-height: 480px;
-  display: flex; align-items: center; justify-content: center;
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   border-radius: 20px;
   border: 1px dashed rgba(255,255,255,0.06);
   background: rgba(255,255,255,0.01);
@@ -464,4 +525,9 @@ onUnmounted(() => {
 .empty-inner { text-align: center; color: var(--text-muted); }
 .empty-inner svg { opacity: 0.4; }
 .empty-inner p { margin-top: 12px; font-size: 14px; }
+
+/* 与 result-fill 同节点时覆盖 flex-start，保证空态垂直居中 */
+.result-fill.empty-wrap {
+  justify-content: center;
+}
 </style>

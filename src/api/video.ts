@@ -1,5 +1,4 @@
 import http from './http'
-import { DEFAULT_VIDEO_MODEL } from '@/config/models'
 
 export interface VideoResult {
   url: string
@@ -13,17 +12,17 @@ export interface VideoTask {
   video_result?: VideoResult[]
 }
 
-/** 提交任务，返回 task id */
-export async function submitVideo(prompt: string, imageUrl?: string): Promise<string> {
-  const body: Record<string, unknown> = { model: DEFAULT_VIDEO_MODEL, prompt }
-  if (imageUrl) body.image_url = imageUrl
-
+export async function submitVideoTask(body: Record<string, unknown>): Promise<string> {
   const { data } = await http.post('/videos/generations', body)
-  return data.id ?? data.task_id ?? data.data?.task_id
+  const taskId = data.id ?? data.task_id ?? data.data?.task_id
+  if (!taskId) throw new Error('提交视频任务失败：未返回任务 ID')
+  return taskId
 }
 
-/** 查询任务状态 */
 export async function fetchVideoTask(taskId: string): Promise<VideoTask> {
   const { data } = await http.get(`/async-result/${taskId}`)
+  if (!data || !data.task_status) {
+    throw new Error('查询视频任务失败：返回数据异常')
+  }
   return data
 }

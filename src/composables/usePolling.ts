@@ -3,13 +3,10 @@ import { ref } from 'vue'
 export type PollDoneStatus = 'success' | 'fail' | 'pending'
 
 export interface PollingOptions {
-  /** 间隔 ms */
   interval?: number
-  /** 最多尝试次数 */
   maxAttempts?: number
 }
 
-/** isDone：success / fail / pending；超时 reject */
 export function usePolling<T>(
   fetcher: () => Promise<T>,
   isDone: (result: T) => PollDoneStatus,
@@ -21,12 +18,50 @@ export function usePolling<T>(
   const attemptCount = ref(0)
   const lastError = ref<Error | null>(null)
 
-  let timer: ReturnType<typeof setInterval> | null = null
+  let timer: ReturnType<typeof setTimeout> | null = null
 
   function stop() {
     if (timer !== null) {
-      clearInterval(timer)
+      clearTimeout(timer)
       timer = null
+    }
+  }
+
+  async function poll(resolve: (value: T) => void, reject: (reason: Error) => void) {
+    attemptCount.value++
+
+    if (attemptCount.value > maxAttempts) {
+      stop()
+      isLoading.value = false
+      lastError.value = new Error(`轮询超时（已尝试 ${maxAttempts} 次）`)
+      reject(lastError.value)
+      return
+    }
+
+    try {
+      const result = await fetcher()
+      const status = isDone(result)
+
+      if (status === 'success') {
+        stop()
+        isLoading.value = false
+        resolve(result)
+        return
+      }
+      if (status === 'fail') {
+        stop()
+        isLoading.value = false
+        lastError.value = new Error('任务执行失败')
+        reject(lastError.value)
+        return
+      }
+
+      timer = setTimeout(() => poll(resolve, reject), interval)
+    } catch (err) {
+      stop()
+      isLoading.value = false
+      lastError.value = err instanceof Error ? err : new Error(String(err))
+      reject(lastError.value)
     }
   }
 
@@ -37,38 +72,7 @@ export function usePolling<T>(
     lastError.value = null
 
     return new Promise<T>((resolve, reject) => {
-      timer = setInterval(async () => {
-        attemptCount.value++
-
-        if (attemptCount.value > maxAttempts) {
-          stop()
-          isLoading.value = false
-          lastError.value = new Error(`轮询超时（已尝试 ${maxAttempts} 次）`)
-          return reject(lastError.value)
-        }
-
-        try {
-          const result = await fetcher()
-          const status = isDone(result)
-
-          if (status === 'success') {
-            stop()
-            isLoading.value = false
-            return resolve(result)
-          }
-          if (status === 'fail') {
-            stop()
-            isLoading.value = false
-            lastError.value = new Error('任务执行失败')
-            return reject(lastError.value)
-          }
-        } catch (err) {
-          stop()
-          isLoading.value = false
-          lastError.value = err instanceof Error ? err : new Error(String(err))
-          return reject(lastError.value)
-        }
-      }, interval)
+      poll(resolve, reject)
     })
   }
 

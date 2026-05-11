@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { useGenerationStore, type HistoryItem } from '@/stores/generation'
+import { useHistoryStore, type HistoryItem } from '@/stores/history'
+import { useVideoStore } from '@/stores/video'
 
-const store = useGenerationStore()
+const historyStore = useHistoryStore()
+const videoStore = useVideoStore()
 
 function formatTime(ts: number): string {
   const d = new Date(ts)
@@ -12,13 +14,13 @@ function formatTime(ts: number): string {
 
 function useHistoryItem(item: HistoryItem) {
   if (item.type === 'img') {
-    store.sendToVideo(item.url)
+    videoStore.imageUrl = item.url
   }
 }
 </script>
 
 <template>
-  <section class="history-panel" v-if="store.history.length > 0">
+  <section class="history-panel" v-if="historyStore.items.length > 0">
     <div class="panel-head">
       <div class="head-left">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -30,14 +32,14 @@ function useHistoryItem(item: HistoryItem) {
           <span class="panel-kicker">最近记录</span>
           <h3 class="panel-title">本次会话里的创作结果</h3>
         </div>
-        <span class="panel-count">{{ store.history.length }}</span>
+        <span class="panel-count">{{ historyStore.items.length }}</span>
       </div>
-      <button class="clear-btn" @click="store.clearHistory()">清空</button>
+      <button class="clear-btn" @click="historyStore.clear()">清空</button>
     </div>
 
     <div class="history-list">
       <div
-        v-for="item in store.history"
+        v-for="item in historyStore.items"
         :key="item.id"
         class="history-item"
         @click="useHistoryItem(item)"

@@ -1,14 +1,38 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useGenerationStore } from '@/stores/generation'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useVideoStore } from '@/stores/video'
+import { useToast } from '@/composables/useToast'
+import { priceLabel } from '@/config/videoModels'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
+import ChipSelect from '@/components/ChipSelect.vue'
 
-const store = useGenerationStore()
+const store = useVideoStore()
+const toast = useToast()
 
 const dropZone = ref<HTMLDivElement>()
 const fileInput = ref<HTMLInputElement>()
 const isDragging = ref(false)
+const uploadTarget = ref<'main' | 'last' | 'r2' | 'r3'>('main')
+
+const priceLine = computed(() => priceLabel(store.currentPreset))
+
+const showPrimaryImage = computed(() => store.currentPreset.inputKind !== 'text_only')
+const showLastFrame = computed(() => store.currentPreset.inputKind === 'two_frames')
+const showRefExtras = computed(() => store.currentPreset.inputKind === 'one_to_three_refs')
+const primaryImageLabel = computed(() => {
+  const k = store.currentPreset.inputKind
+  if (k === 'text_or_image') return '参考图像（可选，文生视频可不传）'
+  if (k === 'one_to_three_refs') return '参考图 1'
+  if (k === 'two_frames') return '首帧图像'
+  return '参考图像'
+})
+
+const durationItems = computed(() =>
+  (store.currentPreset.durations ?? []).map((d) => String(d))
+)
+
+const fpsItems = computed(() => (store.currentPreset.fps ?? []).map((f) => String(f)))
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -27,15 +51,20 @@ async function handleFiles(files: FileList | File[]) {
   const file = files[0]
   if (!file) return
   try {
-    store.videoImageUrl = await fileToDataUrl(file)
+    const url = await fileToDataUrl(file)
+    if (uploadTarget.value === 'main') store.imageUrl = url
+    else if (uploadTarget.value === 'last') store.lastFrameUrl = url
+    else if (uploadTarget.value === 'r2') store.ref2Url = url
+    else store.ref3Url = url
   } catch (e: any) {
-    alert(e.message || '图片读取失败')
+    toast.show(e.message || '图片读取失败', 'error')
   }
 }
 
 function onDrop(e: DragEvent) {
   isDragging.value = false
   e.preventDefault()
+  uploadTarget.value = 'main'
   const files = e.dataTransfer?.files
   if (files?.length) handleFiles(files)
 }
@@ -57,16 +86,21 @@ function onFileChange(e: Event) {
   }
 }
 
-function triggerFileInput() {
+function triggerFileInput(target: 'main' | 'last' | 'r2' | 'r3' = 'main') {
+  uploadTarget.value = target
   fileInput.value?.click()
 }
 
 function onPaste(e: ClipboardEvent) {
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
   const items = e.clipboardData?.items
   if (!items) return
   for (const item of items) {
     if (item.type.startsWith('image/')) {
       e.preventDefault()
+      uploadTarget.value = 'main'
       const file = item.getAsFile()
       if (file) handleFiles([file])
       return
@@ -95,17 +129,108 @@ onUnmounted(() => {
             </svg>
           </div>
           <div class="head-text">
-            <h2 class="card-title">图生视频</h2>
-            <span class="card-hint">上传图片并描述运动方式</span>
+            <h2 class="card-title">视频生成</h2>
+            <span class="card-hint">按智谱文档选择模型与参数；异步任务完成后在右侧预览</span>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="label">参考图片</label>
+          <label class="label">模型</label>
+          <select v-model="store.presetId" class="video-model-select">
+            <option
+              v-for="p in store.VIDEO_GEN_PRESETS"
+              :key="p.id"
+              :value="p.id"
+            >
+              {{ p.label }} · {{ priceLabel(p) }}
+            </option>
+          </select>
+          <p class="model-meta">
+            <span>价格：{{ priceLine }}</span>
+            <span class="meta-sep">·</span>
+            <span>输入：{{ store.currentPreset.modalitiesDesc }}</span>
+          </p>
+        </div>
 
-          <div v-if="store.videoImageUrl" class="source-preview">
-            <img :src="store.videoImageUrl" alt="参考图片" class="source-img" />
-            <button class="clear-btn" @click="store.videoImageUrl = ''">
+        <ChipSelect
+          v-if="store.currentPreset.durations && store.currentPreset.durations.length > 1"
+          label="时长（秒）"
+          :model-value="String(store.duration)"
+          :items="durationItems"
+          @update:model-value="(v) => (store.duration = Number(v))"
+        />
+        <p
+          v-else-if="store.currentPreset.durations?.length === 1"
+          class="fixed-param"
+        >时长：{{ store.currentPreset.durations[0] }} 秒（文档固定）</p>
+
+        <ChipSelect
+          label="分辨率（size）"
+          :model-value="store.size"
+          :items="store.currentPreset.sizes"
+          @update:model-value="(v) => (store.size = v)"
+        />
+
+        <ChipSelect
+          v-if="store.currentPreset.fps?.length"
+          label="帧率（fps）"
+          :model-value="String(store.fps)"
+          :items="fpsItems"
+          @update:model-value="(v) => (store.fps = Number(v))"
+        />
+
+        <div v-if="store.currentPreset.quality?.length" class="form-group">
+          <label class="label">输出模式（quality）</label>
+          <select v-model="store.quality" class="param-select">
+            <option value="speed">speed · 速度优先（默认）</option>
+            <option value="quality">quality · 质量优先</option>
+          </select>
+        </div>
+
+        <div v-if="store.currentPreset.style?.length" class="form-group">
+          <label class="label">风格（style）</label>
+          <select v-model="store.style" class="param-select">
+            <option value="general">general · 通用</option>
+            <option value="anime">anime · 动漫优化</option>
+          </select>
+        </div>
+
+        <div v-if="store.currentPreset.aspectRatio?.length" class="form-group">
+          <label class="label">宽高比（aspect_ratio）</label>
+          <select v-model="store.aspectRatio" class="param-select">
+            <option v-for="a in store.currentPreset.aspectRatio" :key="a" :value="a">{{ a }}</option>
+          </select>
+        </div>
+
+        <div v-if="store.currentPreset.movementAmplitude?.length" class="form-group">
+          <label class="label">运动幅度（movement_amplitude）</label>
+          <select v-model="store.movementAmplitude" class="param-select">
+            <option value="auto">auto</option>
+            <option value="small">small</option>
+            <option value="medium">medium</option>
+            <option value="large">large</option>
+          </select>
+        </div>
+
+        <div v-if="store.currentPreset.withAudioConfigurable" class="check-row">
+          <label class="check-label">
+            <input v-model="store.withAudio" type="checkbox" />
+            生成音效 / 配乐（with_audio，以接口与模型支持为准）
+          </label>
+        </div>
+        <div v-if="store.currentPreset.watermarkConfigurable" class="check-row">
+          <label class="check-label">
+            <input v-model="store.watermarkEnabled" type="checkbox" />
+            启用水印（watermark_enabled）
+          </label>
+        </div>
+
+        <div v-if="showPrimaryImage" class="form-group">
+          <label class="label">{{ primaryImageLabel }}</label>
+
+          <div v-if="store.imageUrl" class="source-preview">
+            <img :src="store.imageUrl" alt="参考图片" class="source-img" />
+            <button type="button" class="clear-btn" @click="store.imageUrl = ''">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -121,7 +246,7 @@ onUnmounted(() => {
             @drop="onDrop"
             @dragover="onDragOver"
             @dragleave="onDragLeave"
-            @click="triggerFileInput"
+            @click="triggerFileInput('main')"
           >
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -133,43 +258,73 @@ onUnmounted(() => {
             <p class="drop-hint">支持 Ctrl+V 粘贴 · 拖拽 · 点击选择 · URL 输入</p>
             <div class="url-row">
               <input
-                v-model="store.videoImageUrl"
+                v-model="store.imageUrl"
                 class="url-input"
                 placeholder="或粘贴图片 URL..."
                 @click.stop
               />
             </div>
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/*"
-              class="hidden-input"
-              @change="onFileChange"
-            />
+          </div>
+        </div>
+
+        <div v-if="showLastFrame" class="form-group">
+          <label class="label">尾帧图像</label>
+          <div v-if="store.lastFrameUrl" class="source-preview">
+            <img :src="store.lastFrameUrl" alt="尾帧" class="source-img" />
+            <button type="button" class="clear-btn" @click="store.lastFrameUrl = ''">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <button type="button" class="secondary-upload" @click="triggerFileInput('last')">
+            {{ store.lastFrameUrl ? '更换尾帧' : '上传尾帧' }}
+          </button>
+        </div>
+
+        <div v-if="showRefExtras" class="form-group">
+          <label class="label">参考图 2、3（可选；参考图 1 见上方）</label>
+          <div class="ref-url-row">
+            <input v-model="store.ref2Url" class="url-input" placeholder="参考图 2 URL 或留空" @click.stop />
+            <button type="button" class="secondary-upload" @click="triggerFileInput('r2')">上传图2</button>
+          </div>
+          <div class="ref-url-row">
+            <input v-model="store.ref3Url" class="url-input" placeholder="参考图 3 URL 或留空" @click.stop />
+            <button type="button" class="secondary-upload" @click="triggerFileInput('r3')">上传图3</button>
           </div>
         </div>
 
         <div class="form-group">
-          <label class="label">视频描述</label>
+          <label class="label">提示词（prompt）</label>
           <PromptInput
-            v-model="store.videoPrompt"
-            placeholder="描述视频中的运动和变化，例如：镜头缓缓推进，花瓣随风飘落..."
+            v-model="store.prompt"
+            :max-length="store.currentPreset.promptMaxLen"
+            placeholder="描述视频中的运动和变化；部分模型允许仅图或仅文，见上方输入模态说明"
           />
         </div>
 
+        <input
+          ref="fileInput"
+          type="file"
+          accept="image/*"
+          class="hidden-input"
+          @change="onFileChange"
+        />
+
         <div class="card-actions">
           <GenButton
-            :disabled="!store.canGenVideo || store.videoLoading"
-            :loading="store.videoLoading"
-            :text="store.videoLoading ? store.videoStatus || '生成中...' : '生成视频'"
-            @click="store.generateVideo()"
+            :disabled="!store.canGenerate || store.loading"
+            :loading="store.loading"
+            :text="store.loading ? store.status || '生成中...' : '生成视频'"
+            @click="store.generate()"
           />
         </div>
       </div>
     </div>
 
     <div class="result-area">
-      <div v-if="store.videoLoading" class="result-fill skeleton-grid">
+      <div v-if="store.loading" class="result-fill skeleton-grid">
         <div class="video-preview">
           <div class="video-wrap loading-media">
             <div class="loading-spinner"></div>
@@ -180,20 +335,22 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-else-if="store.videoResult" class="result-fill video-result animate-enter">
+      <div v-else-if="store.result" class="result-fill video-result animate-enter">
         <div class="video-preview">
           <div class="video-wrap">
             <video
-              :src="store.videoResult.url"
-              :poster="store.videoResult.cover_image_url"
+              :src="store.result.url"
+              :poster="store.result.cover_image_url"
               controls
               loop
               class="result-video"
-            />
+            >
+              <source :src="store.result.url" type="video/mp4" />
+            </video>
           </div>
         </div>
         <div class="video-actions">
-          <a :href="store.videoResult.url" target="_blank" class="action-btn">
+          <a :href="store.result.url" target="_blank" class="action-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -205,7 +362,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-else-if="store.videoError" class="result-fill error-wrap">
+      <div v-else-if="store.error" class="result-fill error-wrap">
         <div class="error-inner">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -214,8 +371,8 @@ onUnmounted(() => {
             <line x1="9" y1="9" x2="15" y2="15"/>
           </svg>
           <h3>生成失败</h3>
-          <p>{{ store.videoError }}</p>
-          <button class="retry-btn" @click="store.videoError = null">重试</button>
+          <p>{{ store.error }}</p>
+          <button class="retry-btn" @click="store.error = null">重试</button>
         </div>
       </div>
 
@@ -225,7 +382,7 @@ onUnmounted(() => {
             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
-          <p>上传图片并描述运动，开始生成视频</p>
+          <p>选择模型与参数，填写提示词或按模态上传图像后开始生成</p>
         </div>
       </div>
     </div>
@@ -386,6 +543,81 @@ onUnmounted(() => {
 .url-input::placeholder { color: var(--text-muted); }
 
 .hidden-input { display: none; }
+
+.video-model-select {
+  width: 100%;
+  height: 46px;
+  border-radius: 14px;
+  border: none;
+  background: rgb(18, 18, 20);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-main);
+  font-weight: 600;
+  padding: 0 12px;
+  outline: none;
+}
+.model-meta {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.meta-sep { margin: 0 6px; opacity: 0.5; }
+.param-select {
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: rgb(18, 18, 20);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: var(--font-main);
+  font-weight: 600;
+  padding: 0 12px;
+}
+.check-row {
+  margin-bottom: 14px;
+}
+.check-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.check-label input {
+  margin-top: 3px;
+}
+.secondary-upload {
+  margin-top: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-main);
+}
+.secondary-upload:hover {
+  background: rgba(20, 150, 243, 0.12);
+  color: #1496f3;
+}
+.ref-url-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.ref-url-row .url-input { flex: 1; margin-top: 0; }
+.fixed-param {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
 
 .result-area {
   flex: 1;

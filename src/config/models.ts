@@ -1,3 +1,5 @@
+import { DEFAULT_VIDEO_PRESET_ID, VIDEO_GEN_PRESETS, priceLabel } from './videoModels'
+
 export type ModelScene = 'text-to-image' | 'image-to-video'
 
 export type ModelProvider = 'zhipu'
@@ -138,31 +140,26 @@ export const IMAGE_MODELS: AiModelConfig[] = [
   }
 ]
 
-export const VIDEO_MODELS: AiModelConfig[] = [
-  {
-    id: 'cogvideox-2',
-    name: 'CogVideoX-2',
-    provider: 'zhipu',
-    scene: 'image-to-video',
-    endpoint: '/videos/generations',
-    pricing: {
-      cnyPerCall: 0.5,
-      unit: 'call',
-      note: '按用户提供价格记录：0.5 元/次'
-    },
-    enabled: true,
-    isDefault: true,
-    requestParams: ['model', 'prompt', 'image_url'],
-    description: '当前项目图生视频默认模型。先提交异步任务，再通过 taskId 轮询生成结果。',
-    notes: [
-      'image_url 来自上传/粘贴图片、手动 URL 或文生图结果 URL。',
-      '当前轮询接口为 /async-result/:taskId。'
-    ]
-  }
-]
+export const VIDEO_MODELS: AiModelConfig[] = VIDEO_GEN_PRESETS.map((p) => ({
+  id: p.id,
+  name: p.label,
+  provider: 'zhipu',
+  scene: 'image-to-video',
+  endpoint: '/videos/generations',
+  pricing: {
+    cnyPerCall: p.priceCny,
+    unit: 'call',
+    note: p.priceNote ?? priceLabel(p)
+  },
+  enabled: true,
+  isDefault: p.id === DEFAULT_VIDEO_PRESET_ID,
+  requestParams: [],
+  description: p.modalitiesDesc,
+  notes: [p.docRef, priceLabel(p)]
+}))
 
 export const AI_MODEL_CATALOG = [...IMAGE_MODELS, ...VIDEO_MODELS]
 
 export const DEFAULT_IMAGE_MODEL = IMAGE_MODELS.find(model => model.isDefault)?.id ?? 'cogview-3-plus'
 
-export const DEFAULT_VIDEO_MODEL = VIDEO_MODELS.find(model => model.isDefault)?.id ?? 'cogvideox-2'
+export const DEFAULT_VIDEO_MODEL = DEFAULT_VIDEO_PRESET_ID

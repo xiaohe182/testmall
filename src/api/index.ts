@@ -1,2 +1,2 @@
-export { genImg, type ImgResult } from './img'
-export { submitVideo, fetchVideoTask, type VideoResult, type VideoTask, type TaskStatus } from './video'
+export { genImg, type ImgResult, type ImgGenerationOptions } from './img'
+export { submitVideoTask, fetchVideoTask, type VideoResult, type VideoTask, type TaskStatus } from './video'

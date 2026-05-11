@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import logoUrl from '@/assets/logo.png'
-import { useGenerationStore } from '@/stores/generation'
+import { useImageStore } from '@/stores/image'
 import TextToImg from '@/components/TextToImg.vue'
 import ImgToVideo from '@/components/ImgToVideo.vue'
 import HistoryPanel from '@/components/HistoryPanel.vue'
 import BeamGallery from '@/components/BeamGallery.vue'
 import LongImgGallery from '@/components/LongImgGallery.vue'
 import VideoGallery from '@/components/VideoGallery.vue'
+import ToastNotify from '@/components/ToastNotify.vue'
 
 type Tab = 'img' | 'video'
 
 const tab = ref<Tab>('img')
-const store = useGenerationStore()
+const imageStore = useImageStore()
 
 function onGallerySelect(prompt: string) {
-  store.imgPrompt = prompt
+  imageStore.prompt = prompt
   tab.value = 'img'
 }
 </script>
@@ -100,6 +101,8 @@ function onGallerySelect(prompt: string) {
       <div class="ft-line"></div>
       <p>小竹熊 · AI 图片与视频创作台</p>
     </footer>
+
+    <ToastNotify />
   </div>
 </template>
 

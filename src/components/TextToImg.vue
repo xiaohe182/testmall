@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { useGenerationStore } from '@/stores/generation'
+import { useImageStore } from '@/stores/image'
+import { useVideoStore } from '@/stores/video'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
 import ChipSelect from '@/components/ChipSelect.vue'
 
-const store = useGenerationStore()
+const imgStore = useImageStore()
+const videoStore = useVideoStore()
 const emit = defineEmits<{ switchToVideo: [] }>()
 
 const presets = [
@@ -17,7 +19,12 @@ const presets = [
 ]
 
 function fillPreset(t: string) {
-  store.imgPrompt = t
+  imgStore.prompt = t
+}
+
+function sendToVideo(url: string) {
+  videoStore.imageUrl = url
+  emit('switchToVideo')
 }
 </script>
 
@@ -35,27 +42,27 @@ function fillPreset(t: string) {
           <div class="head-text">
             <h2 class="card-title">描述你想要的图片</h2>
             <span class="card-hint">
-              {{ store.imgPrompt.length }} / {{ store.currentImageModel.imageOptions?.promptMaxLength || 1000 }} 字
+              {{ imgStore.prompt.length }} / {{ imgStore.currentModel.imageOptions?.promptMaxLength || 1000 }} 字
             </span>
           </div>
         </div>
 
         <PromptInput
-          v-model="store.imgPrompt"
+          v-model="imgStore.prompt"
           placeholder="描述你想生成的图片内容，越详细效果越好..."
-          :max-length="store.currentImageModel.imageOptions?.promptMaxLength || 1000"
+          :max-length="imgStore.currentModel.imageOptions?.promptMaxLength || 1000"
         />
 
         <div class="presets">
           <span class="label">灵感提示</span>
           <div class="presets-list">
-            <button v-for="p in presets" :key="p" class="chip" @click="fillPreset(p)" :disabled="store.imgLoading">
+            <button v-for="p in presets" :key="p" class="chip" @click="fillPreset(p)" :disabled="imgStore.loading">
               {{ p }}
             </button>
           </div>
         </div>
 
-        <ChipSelect label="尺寸" v-model="store.imgSize" :items="store.currentImageSizeOptions" />
+        <ChipSelect label="尺寸" v-model="imgStore.size" :items="imgStore.sizeOptions" />
 
         <div class="batch-row">
           <span class="label">生成数量</span>
@@ -63,8 +70,8 @@ function fillPreset(t: string) {
             <button
               v-for="n in [1, 2, 4]"
               :key="n"
-              :class="['batch-chip', { active: store.imgBatchSize === n }]"
-              @click="store.imgBatchSize = n"
+              :class="['batch-chip', { active: imgStore.batchSize === n }]"
+              @click="imgStore.batchSize = n"
             >{{ n }} 张</button>
           </div>
         </div>
@@ -72,26 +79,26 @@ function fillPreset(t: string) {
         <div class="card-actions">
           <div class="generate-action">
             <GenButton
-              :disabled="!store.canGenImg || store.imgLoading"
-              :loading="store.imgLoading"
+              :disabled="!imgStore.canGenerate || imgStore.loading"
+              :loading="imgStore.loading"
               text="生成图片"
-              @click="store.generateImage()"
+              @click="imgStore.generate()"
             />
           </div>
 
           <label class="model-picker">
             <select
-              v-model="store.imgModel"
+              v-model="imgStore.model"
               class="model-select"
-              :disabled="store.imgLoading"
-              @change="store.syncImageSizeWithModel()"
+              :disabled="imgStore.loading"
+              @change="imgStore.syncSize()"
             >
               <option
-                v-for="model in store.imageModelOptions"
-                :key="model.id"
-                :value="model.id"
+                v-for="m in imgStore.modelOptions"
+                :key="m.id"
+                :value="m.id"
               >
-                {{ model.name }} · {{ model.pricing.cnyPerCall === null ? '价格待确认' : `${model.pricing.cnyPerCall}元/次` }}
+                {{ m.name }} · {{ m.pricing.cnyPerCall === null ? '价格待确认' : `${m.pricing.cnyPerCall}元/次` }}
               </option>
             </select>
           </label>
@@ -101,12 +108,12 @@ function fillPreset(t: string) {
 
     <div class="result-area">
       <div
-        v-if="store.imgLoading"
+        v-if="imgStore.loading"
         class="result-fill skeleton-grid"
-        :class="{ 'cols-2': store.imgBatchSize > 1 }"
+        :class="{ 'cols-2': imgStore.batchSize > 1 }"
       >
         <div
-          v-for="i in store.imgBatchSize"
+          v-for="i in imgStore.batchSize"
           :key="i"
           class="result-item loading-item"
         >
@@ -122,8 +129,8 @@ function fillPreset(t: string) {
         </div>
       </div>
 
-      <div v-else-if="store.imgResults.length > 0" class="result-fill result-grid" :class="{ single: store.imgResults.length === 1 }">
-        <div v-for="(item, idx) in store.imgResults" :key="idx" class="result-item">
+      <div v-else-if="imgStore.results.length > 0" class="result-fill result-grid" :class="{ single: imgStore.results.length === 1 }">
+        <div v-for="(item, idx) in imgStore.results" :key="idx" class="result-item">
           <div class="img-preview">
             <div class="img-wrap">
               <img :src="item.url" alt="生成图片" class="result-img" />
@@ -131,7 +138,7 @@ function fillPreset(t: string) {
           </div>
           <div class="action-bar">
             <a :href="item.url" target="_blank" download class="action-btn">下载原图</a>
-            <button class="action-btn accent" @click="store.sendToVideo(item.url); emit('switchToVideo')">
+            <button class="action-btn accent" @click="sendToVideo(item.url)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>

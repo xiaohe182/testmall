@@ -9,7 +9,7 @@ export interface PollingOptions {
   maxAttempts?: number
 }
 
-/** isDone：success / fail / pending；超时 reject */
+/** isDone：success / fail / pending；超时 reject；首次立即执行 */
 export function usePolling<T>(
   fetcher: () => Promise<T>,
   isDone: (result: T) => PollDoneStatus,
@@ -21,27 +21,36 @@ export function usePolling<T>(
   const attemptCount = ref(0)
   const lastError = ref<Error | null>(null)
 
-  let timer: ReturnType<typeof setInterval> | null = null
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let aborted = false
 
   function stop() {
     if (timer !== null) {
-      clearInterval(timer)
+      clearTimeout(timer)
       timer = null
     }
+    aborted = true
+  }
+
+  function reset() {
+    stop()
+    isLoading.value = false
+    attemptCount.value = 0
+    lastError.value = null
+    aborted = false
   }
 
   function start(): Promise<T> {
-    stop()
+    reset()
     isLoading.value = true
-    attemptCount.value = 0
-    lastError.value = null
 
     return new Promise<T>((resolve, reject) => {
-      timer = setInterval(async () => {
+      const poll = async () => {
+        if (aborted) return
+
         attemptCount.value++
 
         if (attemptCount.value > maxAttempts) {
-          stop()
           isLoading.value = false
           lastError.value = new Error(`轮询超时（已尝试 ${maxAttempts} 次）`)
           return reject(lastError.value)
@@ -49,32 +58,34 @@ export function usePolling<T>(
 
         try {
           const result = await fetcher()
+          if (aborted) return
+
           const status = isDone(result)
 
           if (status === 'success') {
-            stop()
             isLoading.value = false
             return resolve(result)
           }
           if (status === 'fail') {
-            stop()
             isLoading.value = false
             lastError.value = new Error('任务执行失败')
             return reject(lastError.value)
           }
+
+          timer = setTimeout(poll, interval)
         } catch (err) {
-          stop()
           isLoading.value = false
           lastError.value = err instanceof Error ? err : new Error(String(err))
           return reject(lastError.value)
         }
-      }, interval)
+      }
+
+      poll()
     })
   }
 
   function cleanup() {
-    stop()
-    isLoading.value = false
+    reset()
   }
 
   return { start, stop, cleanup, isLoading, attemptCount, lastError }

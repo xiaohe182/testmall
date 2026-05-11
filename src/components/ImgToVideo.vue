@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useGenerationStore } from '@/stores/generation'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
+import ResultContainer from '@/components/ResultContainer.vue'
 
 const store = useGenerationStore()
 
@@ -169,65 +170,44 @@ onUnmounted(() => {
     </div>
 
     <div class="result-area">
-      <div v-if="store.videoLoading" class="result-fill skeleton-grid">
-        <div class="video-preview">
-          <div class="video-wrap loading-media">
-            <div class="loading-spinner"></div>
-          </div>
-        </div>
-        <div class="video-actions loading-actions">
-          <span class="action-placeholder"></span>
-        </div>
-      </div>
-
-      <div v-else-if="store.videoResult" class="result-fill video-result animate-enter">
-        <div class="video-preview">
-          <div class="video-wrap">
-            <video
-              :src="store.videoResult.url"
-              :poster="store.videoResult.cover_image_url"
-              controls
-              loop
-              class="result-video"
-            />
-          </div>
-        </div>
-        <div class="video-actions">
-          <a :href="store.videoResult.url" target="_blank" class="action-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            下载视频
-          </a>
-        </div>
-      </div>
-
-      <div v-else-if="store.videoError" class="result-fill error-wrap">
-        <div class="error-inner">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
-          </svg>
-          <h3>生成失败</h3>
-          <p>{{ store.videoError }}</p>
-          <button class="retry-btn" @click="store.videoError = null">重试</button>
-        </div>
-      </div>
-
-      <div v-else class="result-fill empty-wrap">
-        <div class="empty-inner">
+      <ResultContainer
+        :loading="store.videoLoading"
+        :error="store.videoError"
+        empty-text="上传图片并描述运动，开始生成视频"
+        @retry="store.generateVideo()"
+      >
+        <template #empty-icon>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
-          <p>上传图片并描述运动，开始生成视频</p>
+        </template>
+
+        <div class="video-result result-fill animate-enter">
+          <div class="video-preview">
+            <div class="video-wrap">
+              <video
+                :src="store.videoResult!.url"
+                :poster="store.videoResult!.cover_image_url"
+                controls
+                loop
+                class="result-video"
+              />
+            </div>
+          </div>
+          <div class="video-actions">
+            <a :href="store.videoResult!.url" target="_blank" class="action-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              下载视频
+            </a>
+          </div>
         </div>
-      </div>
+      </ResultContainer>
     </div>
   </div>
 </template>
@@ -403,11 +383,6 @@ onUnmounted(() => {
   width: 100%;
 }
 
-.skeleton-grid { width: 100%; }
-
-.video-result.result-fill {
-  justify-content: flex-start;
-}
 .animate-enter {
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -441,33 +416,6 @@ onUnmounted(() => {
   object-fit: contain;
 }
 
-.loading-media {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    linear-gradient(110deg, rgba(99,102,241,0.04) 30%, rgba(99,102,241,0.1) 50%, rgba(99,102,241,0.04) 70%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-.loading-spinner {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: none;
-  background: conic-gradient(from 0deg, rgba(20, 150, 243, 0.9), rgba(20, 150, 243, 0.1));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px));
-  animation: spin 0.8s linear infinite;
-}
-.action-placeholder {
-  height: 36px;
-  width: 120px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.04);
-  border: none;
-}
-
 .video-actions {
   margin-top: 14px;
   display: flex; gap: 8px;
@@ -483,67 +431,5 @@ onUnmounted(() => {
 }
 .action-btn:hover {
   background: rgba(255,255,255,0.15);
-}
-
-.error-wrap {
-  width: 100%;
-  min-height: 0;
-  flex: 1;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 16px;
-  border: none;
-  background: rgba(255,80,80,0.03);
-}
-.error-inner { text-align: center; color: var(--text-muted); }
-.error-inner svg { color: rgba(255,80,80,0.5); margin-bottom: 12px; }
-.error-inner h3 {
-  margin: 0 0 8px;
-  color: rgba(255,150,150,0.9);
-  font-size: 16px; font-weight: 700;
-}
-.error-inner p {
-  margin: 0 0 16px;
-  font-size: 13px; line-height: 1.5;
-  max-width: 320px;
-}
-.retry-btn {
-  padding: 6px 18px; border-radius: 8px;
-  border: none;
-  background: rgba(255,255,255,0.05);
-  color: var(--text-secondary);
-  font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all var(--transition-fast);
-}
-.retry-btn:hover {
-  background: rgba(255,255,255,0.1);
-}
-
-.empty-wrap {
-  width: 100%;
-  flex: 1;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 20px;
-  border: none;
-  background: rgba(255,255,255,0.01);
-}
-.empty-inner { text-align: center; color: var(--text-muted); }
-.empty-inner svg { opacity: 0.4; }
-.empty-inner p { margin-top: 12px; font-size: 14px; }
-
-.result-fill.empty-wrap {
-  justify-content: center;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 </style>

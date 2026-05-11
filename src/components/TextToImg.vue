@@ -3,6 +3,7 @@ import { useGenerationStore } from '@/stores/generation'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
 import ChipSelect from '@/components/ChipSelect.vue'
+import ResultContainer from '@/components/ResultContainer.vue'
 
 const store = useGenerationStore()
 const emit = defineEmits<{ switchToVideo: [] }>()
@@ -100,58 +101,32 @@ function fillPreset(t: string) {
     </div>
 
     <div class="result-area">
-      <div
-        v-if="store.imgLoading"
-        class="result-fill skeleton-grid"
-        :class="{ 'cols-2': store.imgBatchSize > 1 }"
+      <ResultContainer
+        :loading="store.imgLoading"
+        :error="store.imgError"
+        empty-text="输入描述，开始创作"
+        :loading-cols="store.imgBatchSize > 1 ? 2 : 1"
+        @retry="store.generateImage()"
       >
-        <div
-          v-for="i in store.imgBatchSize"
-          :key="i"
-          class="result-item loading-item"
-        >
-          <div class="img-preview">
-            <div class="img-wrap loading-media">
-              <div class="loading-spinner"></div>
+        <div class="result-grid" :class="{ single: store.imgResults.length === 1 }">
+          <div v-for="(item, idx) in store.imgResults" :key="idx" class="result-item">
+            <div class="img-preview">
+              <div class="img-wrap">
+                <img :src="item.url" alt="生成图片" class="result-img" />
+              </div>
+            </div>
+            <div class="action-bar">
+              <a :href="item.url" target="_blank" download class="action-btn">下载原图</a>
+              <button class="action-btn accent" @click="store.sendToVideo(item.url); emit('switchToVideo')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                生成视频
+              </button>
             </div>
           </div>
-          <div class="action-bar loading-actions">
-            <span class="action-placeholder"></span>
-            <span class="action-placeholder accent"></span>
-          </div>
         </div>
-      </div>
-
-      <div v-else-if="store.imgResults.length > 0" class="result-fill result-grid" :class="{ single: store.imgResults.length === 1 }">
-        <div v-for="(item, idx) in store.imgResults" :key="idx" class="result-item">
-          <div class="img-preview">
-            <div class="img-wrap">
-              <img :src="item.url" alt="生成图片" class="result-img" />
-            </div>
-          </div>
-          <div class="action-bar">
-            <a :href="item.url" target="_blank" download class="action-btn">下载原图</a>
-            <button class="action-btn accent" @click="store.sendToVideo(item.url); emit('switchToVideo')">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"/>
-              </svg>
-              生成视频
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="result-fill empty-wrap">
-        <div class="empty-inner">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <path d="m21 15-5-5L5 21"/>
-          </svg>
-          <p>输入描述，开始创作</p>
-        </div>
-      </div>
+      </ResultContainer>
     </div>
   </div>
 </template>
@@ -331,26 +306,6 @@ function fillPreset(t: string) {
   flex-direction: column;
   min-height: 0;
 }
-.result-fill {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  min-height: 0;
-  width: 100%;
-}
-
-.skeleton-grid {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-  align-content: start;
-  justify-items: stretch;
-}
-.skeleton-grid.cols-2 {
-  grid-template-columns: repeat(2, 1fr);
-}
 
 .result-grid {
   display: grid;
@@ -390,36 +345,6 @@ function fillPreset(t: string) {
   display: block;
 }
 
-.loading-media {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    linear-gradient(110deg, rgba(99,102,241,0.04) 30%, rgba(99,102,241,0.1) 50%, rgba(99,102,241,0.04) 70%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-.loading-spinner {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: none;
-  background: conic-gradient(from 0deg, rgba(20, 150, 243, 0.9), rgba(20, 150, 243, 0.1));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 1.5px));
-  animation: spin 0.8s linear infinite;
-}
-.action-placeholder {
-  flex: 1;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(255,255,255,0.04);
-  border: none;
-}
-.action-placeholder.accent {
-  background: rgba(20, 150, 243, 0.08);
-}
-
 .action-bar {
   display: flex;
   gap: 8px;
@@ -451,40 +376,5 @@ function fillPreset(t: string) {
 }
 .action-btn.accent:hover {
   background: rgba(20, 150, 243, 0.15);
-}
-
-.empty-wrap {
-  width: 100%;
-  flex: 1;
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 20px;
-  border: none;
-  background: rgba(255,255,255,0.01);
-}
-.empty-inner {
-  text-align: center;
-  color: var(--text-muted);
-  max-width: 280px;
-}
-.empty-inner p {
-  margin-top: 12px;
-  font-size: 14px;
-}
-
-.result-fill.empty-wrap {
-  justify-content: center;
-}
-
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 </style>

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useVideoStore } from '@/stores/video'
-import { useToast } from '@/composables/useToast'
+import { toast } from 'vue-sonner'
 import { priceLabel } from '@/config/videoModels'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
 import ChipSelect from '@/components/ChipSelect.vue'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const store = useVideoStore()
-const toast = useToast()
 
 const dropZone = ref<HTMLDivElement>()
 const fileInput = ref<HTMLInputElement>()
@@ -22,7 +22,7 @@ const showLastFrame = computed(() => store.currentPreset.inputKind === 'two_fram
 const showRefExtras = computed(() => store.currentPreset.inputKind === 'one_to_three_refs')
 const primaryImageLabel = computed(() => {
   const k = store.currentPreset.inputKind
-  if (k === 'text_or_image') return '参考图像（可选，文生视频可不传）'
+  if (k === 'text_or_image') return '参考图像（可选 · 支持纯文本或纯图片生成）'
   if (k === 'one_to_three_refs') return '参考图 1'
   if (k === 'two_frames') return '首帧图像'
   return '参考图像'
@@ -57,7 +57,7 @@ async function handleFiles(files: FileList | File[]) {
     else if (uploadTarget.value === 'r2') store.ref2Url = url
     else store.ref3Url = url
   } catch (e: any) {
-    toast.show(e.message || '图片读取失败', 'error')
+    toast.error(e.message || '图片读取失败')
   }
 }
 
@@ -136,15 +136,20 @@ onUnmounted(() => {
 
         <div class="form-group">
           <label class="label">模型</label>
-          <select v-model="store.presetId" class="video-model-select">
-            <option
-              v-for="p in store.VIDEO_GEN_PRESETS"
-              :key="p.id"
-              :value="p.id"
-            >
-              {{ p.label }} · {{ priceLabel(p) }}
-            </option>
-          </select>
+          <Select :model-value="store.presetId" @update:model-value="(v) => store.presetId = String(v)">
+            <SelectTrigger class="model-trigger">
+              <SelectValue placeholder="选择模型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="p in store.VIDEO_GEN_PRESETS"
+                :key="p.id"
+                :value="p.id"
+              >
+                {{ p.label }} · {{ priceLabel(p) }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
           <p class="model-meta">
             <span>价格：{{ priceLine }}</span>
             <span class="meta-sep">·</span>
@@ -181,35 +186,55 @@ onUnmounted(() => {
 
         <div v-if="store.currentPreset.quality?.length" class="form-group">
           <label class="label">输出模式（quality）</label>
-          <select v-model="store.quality" class="param-select">
-            <option value="speed">speed · 速度优先（默认）</option>
-            <option value="quality">quality · 质量优先</option>
-          </select>
+          <Select :model-value="store.quality" @update:model-value="(v) => store.quality = v as 'speed' | 'quality'">
+            <SelectTrigger class="param-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="speed">speed · 速度优先（默认）</SelectItem>
+              <SelectItem value="quality">quality · 质量优先</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div v-if="store.currentPreset.style?.length" class="form-group">
           <label class="label">风格（style）</label>
-          <select v-model="store.style" class="param-select">
-            <option value="general">general · 通用</option>
-            <option value="anime">anime · 动漫优化</option>
-          </select>
+          <Select :model-value="store.style" @update:model-value="(v) => store.style = v as 'general' | 'anime'">
+            <SelectTrigger class="param-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="general">general · 通用</SelectItem>
+              <SelectItem value="anime">anime · 动漫优化</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div v-if="store.currentPreset.aspectRatio?.length" class="form-group">
           <label class="label">宽高比（aspect_ratio）</label>
-          <select v-model="store.aspectRatio" class="param-select">
-            <option v-for="a in store.currentPreset.aspectRatio" :key="a" :value="a">{{ a }}</option>
-          </select>
+          <Select :model-value="store.aspectRatio" @update:model-value="(v) => store.aspectRatio = String(v)">
+            <SelectTrigger class="param-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="a in store.currentPreset.aspectRatio" :key="a" :value="a">{{ a }}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div v-if="store.currentPreset.movementAmplitude?.length" class="form-group">
           <label class="label">运动幅度（movement_amplitude）</label>
-          <select v-model="store.movementAmplitude" class="param-select">
-            <option value="auto">auto</option>
-            <option value="small">small</option>
-            <option value="medium">medium</option>
-            <option value="large">large</option>
-          </select>
+          <Select :model-value="store.movementAmplitude" @update:model-value="(v) => store.movementAmplitude = v as 'auto' | 'small' | 'medium' | 'large'">
+            <SelectTrigger class="param-trigger">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">auto</SelectItem>
+              <SelectItem value="small">small</SelectItem>
+              <SelectItem value="medium">medium</SelectItem>
+              <SelectItem value="large">large</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div v-if="store.currentPreset.withAudioConfigurable" class="check-row">
@@ -391,31 +416,17 @@ onUnmounted(() => {
 
 <style scoped>
 .i2v-wrap {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 380px 1fr;
   gap: 28px;
 }
 .input-area {
-  flex: 0 0 380px;
-  width: 380px;
-  max-width: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 @media (max-width: 860px) {
   .i2v-wrap {
-    flex-direction: column;
-  }
-  .input-area {
-    flex: none;
-    width: 100%;
-  }
-  .card { flex: none; }
-  .result-area {
-    flex: none;
-    width: 100%;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -544,7 +555,7 @@ onUnmounted(() => {
 
 .hidden-input { display: none; }
 
-.video-model-select {
+.model-trigger {
   width: 100%;
   height: 46px;
   border-radius: 14px;
@@ -557,6 +568,13 @@ onUnmounted(() => {
   padding: 0 12px;
   outline: none;
 }
+.model-trigger:focus {
+  background: rgb(22, 22, 26);
+  box-shadow: 0 8px 28px rgba(20, 150, 243, 0.12);
+}
+.model-trigger:disabled {
+  opacity: 0.5;
+}
 .model-meta {
   margin-top: 8px;
   font-size: 11px;
@@ -564,7 +582,7 @@ onUnmounted(() => {
   line-height: 1.45;
 }
 .meta-sep { margin: 0 6px; opacity: 0.5; }
-.param-select {
+.param-trigger {
   width: 100%;
   height: 42px;
   border-radius: 12px;
@@ -575,6 +593,10 @@ onUnmounted(() => {
   font-family: var(--font-main);
   font-weight: 600;
   padding: 0 12px;
+}
+.param-trigger:focus {
+  background: rgb(22, 22, 26);
+  box-shadow: 0 8px 28px rgba(20, 150, 243, 0.12);
 }
 .check-row {
   margin-bottom: 14px;
@@ -620,11 +642,10 @@ onUnmounted(() => {
 }
 
 .result-area {
-  flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 .result-fill {
   flex: 1;
@@ -641,13 +662,8 @@ onUnmounted(() => {
   justify-content: flex-start;
 }
 .animate-enter {
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: resultEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 .video-result { width: 100%; flex-shrink: 0; }
 
 .video-preview {
@@ -655,7 +671,7 @@ onUnmounted(() => {
   border-radius: 16px;
   overflow: hidden;
   border: none;
-  box-shadow: 0 6px 32px rgba(0,0,0,0.2);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3), 0 0 20px rgba(20, 150, 243, 0.04);
   background: #000;
 }
 .video-wrap {

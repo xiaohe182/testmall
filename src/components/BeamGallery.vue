@@ -51,6 +51,7 @@ const pairs = [
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
+  perspective: 1000px;
 }
 
 .card {
@@ -62,12 +63,19 @@ const pairs = [
   cursor: pointer;
   border: none;
   background: var(--bg-secondary);
-  transition: background-color var(--transition-fast);
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), background-color var(--transition-fast), box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .card:hover {
   background: rgba(255,255,255,0.04);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25), 0 0 30px rgba(20, 150, 243, 0.06);
 }
+.card:nth-child(1):hover { transform: perspective(800px) rotateY(3deg) rotateX(-1deg) translateY(-4px); }
+.card:nth-child(2):hover { transform: perspective(800px) rotateY(-2deg) rotateX(-2deg) translateY(-4px); }
+.card:nth-child(3):hover { transform: perspective(800px) rotateY(2deg) rotateX(-1deg) translateY(-4px); }
+.card:nth-child(4):hover { transform: perspective(800px) rotateY(-3deg) rotateX(-2deg) translateY(-4px); }
 .card-copy {
   position: absolute;
   right: 10px;

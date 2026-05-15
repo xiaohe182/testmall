@@ -2,22 +2,34 @@
 import { ref } from 'vue'
 import logoUrl from '@/assets/logo.png'
 import { useImageStore } from '@/stores/image'
+import { useVideoStore } from '@/stores/video'
 import TextToImg from '@/components/TextToImg.vue'
 import ImgToVideo from '@/components/ImgToVideo.vue'
 import HistoryPanel from '@/components/HistoryPanel.vue'
 import BeamGallery from '@/components/BeamGallery.vue'
 import LongImgGallery from '@/components/LongImgGallery.vue'
 import VideoGallery from '@/components/VideoGallery.vue'
-import ToastNotify from '@/components/ToastNotify.vue'
+import { Toaster } from '@/components/ui/sonner'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type Tab = 'img' | 'video'
 
 const tab = ref<Tab>('img')
 const imageStore = useImageStore()
+const videoStore = useVideoStore()
 
 function onGallerySelect(prompt: string) {
   imageStore.prompt = prompt
   tab.value = 'img'
+}
+
+function onHistoryUseImage(url: string) {
+  videoStore.imageUrl = url
+  tab.value = 'video'
+}
+
+function onHistoryUseVideo(url: string) {
+  window.open(url, '_blank')
 }
 </script>
 
@@ -27,42 +39,40 @@ function onGallerySelect(prompt: string) {
       <div class="navbar-inner">
         <img :src="logoUrl" alt="小竹熊" class="nav-logo" />
 
-        <div class="tab-track">
-          <div class="tab-indicator" :class="{ right: tab === 'video' }"></div>
-          <button
-            :class="['tab-item', { on: tab === 'img' }]"
-            @click="tab = 'img'"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <path d="m21 15-5-5L5 21"/>
-            </svg>
-            文生图
-          </button>
-          <button
-            :class="['tab-item', { on: tab === 'video' }]"
-            @click="tab = 'video'"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-            图生视频
-          </button>
-        </div>
+        <Tabs :model-value="tab" @update:model-value="tab = $event as Tab" class="tab-nav">
+          <TabsList class="tab-track">
+            <div class="tab-indicator" :class="{ right: tab === 'video' }"></div>
+            <TabsTrigger value="img" class="tab-item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="m21 15-5-5L5 21"/>
+              </svg>
+              文生图
+            </TabsTrigger>
+            <TabsTrigger value="video" class="tab-item">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              图生视频
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
     </nav>
 
     <main class="main-area fade-up" style="animation-delay:.1s">
-      <TextToImg v-if="tab === 'img'" @switch-to-video="tab = 'video'" />
-      <ImgToVideo v-else />
+      <Transition name="tab-fade" mode="out-in">
+        <TextToImg v-if="tab === 'img'" key="img" @switch-to-video="tab = 'video'" />
+        <ImgToVideo v-else key="video" />
+      </Transition>
     </main>
 
-    <HistoryPanel />
+    <HistoryPanel @use-image="onHistoryUseImage" @use-video="onHistoryUseVideo" />
 
     <div class="bottom-gallery fade-up" style="animation-delay:.25s">
       <div class="section-head">
@@ -102,7 +112,7 @@ function onGallerySelect(prompt: string) {
       <p>小竹熊 · AI 图片与视频创作台</p>
     </footer>
 
-    <ToastNotify />
+    <Toaster theme="dark" :rich-colors="true" position="top-right" />
   </div>
 </template>
 
@@ -125,6 +135,16 @@ function onGallerySelect(prompt: string) {
   padding-left: 24px;
   padding-right: 24px;
 }
+.navbar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 5%;
+  right: 5%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(20, 150, 243, 0.18), rgba(139, 92, 246, 0.1), transparent);
+  pointer-events: none;
+}
 .navbar-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -138,14 +158,17 @@ function onGallerySelect(prompt: string) {
   filter: drop-shadow(0 1px 4px rgba(20, 150, 243, 0.2));
 }
 
+.tab-nav { display: contents; }
 .tab-track {
-  position: relative;
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  background: rgba(255,255,255,0.03);
-  border: none;
-  border-radius: 10px;
+  position: relative !important;
+  display: flex !important;
+  gap: 2px !important;
+  padding: 3px !important;
+  background: rgba(255,255,255,0.03) !important;
+  border: none !important;
+  border-radius: 10px !important;
+  height: auto !important;
+  width: fit-content !important;
 }
 .tab-indicator {
   position: absolute;
@@ -158,29 +181,34 @@ function onGallerySelect(prompt: string) {
   border: none;
   box-shadow: 0 2px 12px rgba(20, 150, 243, 0.12);
   transition: transform var(--transition-normal);
+  pointer-events: none;
 }
 .tab-indicator.right {
   transform: translateX(calc(100% + 2px));
 }
 .tab-item {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 20px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color var(--transition-fast);
-  font-family: var(--font-main);
+  position: relative !important;
+  z-index: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 7px 20px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: color var(--transition-fast) !important;
+  font-family: var(--font-main) !important;
+  box-shadow: none !important;
+  flex: none !important;
+  height: auto !important;
+  width: auto !important;
 }
-.tab-item:hover { color: var(--text-secondary); }
-.tab-item.on { color: var(--text-primary); }
+.tab-item:hover { color: var(--secondary-foreground) !important; background: transparent !important; }
+.tab-item[data-state="active"] { color: var(--foreground) !important; background: transparent !important; }
 
 .section-kicker {
   display: inline-flex;
@@ -257,10 +285,22 @@ function onGallerySelect(prompt: string) {
     gap: 14px;
   }
   .tab-item {
-    padding: 7px 14px;
+    padding: 7px 14px !important;
   }
   .section-head h2 {
     font-size: 22px;
   }
+}
+
+.tab-fade-enter-active,
+.tab-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.tab-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.tab-fade-leave-to {
+  opacity: 0;
 }
 </style>

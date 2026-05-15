@@ -2,7 +2,7 @@ import { ref, computed, watch, onScopeDispose } from 'vue'
 import { defineStore } from 'pinia'
 import { submitVideoTask, fetchVideoTask, type VideoResult } from '@/api/video'
 import { usePolling } from '@/composables/usePolling'
-import { useToast } from '@/composables/useToast'
+import { toast } from 'vue-sonner'
 import { useHistoryStore } from './history'
 import {
   DEFAULT_VIDEO_PRESET_ID,
@@ -13,7 +13,6 @@ import {
 } from '@/config/videoModels'
 
 export const useVideoStore = defineStore('video', () => {
-  const toast = useToast()
   const historyStore = useHistoryStore()
 
   const presetId = ref(DEFAULT_VIDEO_PRESET_ID)
@@ -132,18 +131,18 @@ export const useVideoStore = defineStore('video', () => {
         movementAmplitude: movementAmplitude.value
       })
 
-      const taskId = await submitVideoTask(body)
+      const taskId = await submitVideoTask(body, ac.signal)
 
       if (ac.signal.aborted) return
 
       const poll = usePolling(
-        () => fetchVideoTask(taskId),
+        () => fetchVideoTask(taskId, ac.signal),
         (res) => {
           if (res.task_status === 'SUCCESS') return 'success'
           if (res.task_status === 'FAIL') return 'fail'
           return 'pending'
         },
-        { interval: 3000 }
+        { interval: 3000, initialDelay: 2000 }
       )
       currentPoll = poll
 
@@ -167,7 +166,7 @@ export const useVideoStore = defineStore('video', () => {
       if (ac.signal.aborted) return
       const msg = err.message || '生成视频失败'
       error.value = msg
-      toast.show(msg, 'error')
+      toast.error(msg)
     } finally {
       loading.value = false
       status.value = ''

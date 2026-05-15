@@ -326,7 +326,6 @@ export function buildVideoGenerationPayload(
       style: form.style,
       duration: form.duration,
       aspect_ratio: form.aspectRatio,
-      size: form.size,
       movement_amplitude: form.movementAmplitude
     }
   }
@@ -390,7 +389,6 @@ export function buildVideoGenerationPayload(
       image_url: refs,
       duration: form.duration,
       aspect_ratio: form.aspectRatio,
-      size: form.size,
       movement_amplitude: form.movementAmplitude
     }
     if (prompt) body.prompt = prompt

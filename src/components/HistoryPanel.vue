@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { useHistoryStore, type HistoryItem } from '@/stores/history'
-import { useVideoStore } from '@/stores/video'
+
+const emit = defineEmits<{
+  useImage: [url: string]
+  useVideo: [url: string]
+}>()
 
 const historyStore = useHistoryStore()
-const videoStore = useVideoStore()
 
 function formatTime(ts: number): string {
   const d = new Date(ts)
@@ -14,7 +17,9 @@ function formatTime(ts: number): string {
 
 function useHistoryItem(item: HistoryItem) {
   if (item.type === 'img') {
-    videoStore.imageUrl = item.url
+    emit('useImage', item.url)
+  } else {
+    emit('useVideo', item.url)
   }
 }
 </script>
@@ -30,7 +35,7 @@ function useHistoryItem(item: HistoryItem) {
         </svg>
         <div class="title-wrap">
           <span class="panel-kicker">最近记录</span>
-          <h3 class="panel-title">本次会话里的创作结果</h3>
+          <h3 class="panel-title">历史创作记录</h3>
         </div>
         <span class="panel-count">{{ historyStore.items.length }}</span>
       </div>

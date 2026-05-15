@@ -110,10 +110,11 @@ function handleTouchEnd() {
 
 .long-img-card:hover {
   background: rgba(255, 255, 255, 0.035);
-  transform: translateY(-8px) scale(1.01);
-  box-shadow: 
+  transform: perspective(800px) rotateX(2deg) translateY(-10px) scale(1.02);
+  box-shadow:
     var(--card-shadow-hover),
-    var(--card-glow-hover);
+    var(--card-glow-hover),
+    0 0 40px rgba(20, 150, 243, 0.06);
 }
 
 .img-container {

@@ -5,6 +5,8 @@ export type PollDoneStatus = 'success' | 'fail' | 'pending'
 export interface PollingOptions {
   interval?: number
   maxAttempts?: number
+  /** 首次请求前的延迟（ms） */
+  initialDelay?: number
 }
 
 export function usePolling<T>(
@@ -12,7 +14,7 @@ export function usePolling<T>(
   isDone: (result: T) => PollDoneStatus,
   options: PollingOptions = {}
 ) {
-  const { interval = 3000, maxAttempts = 100 } = options
+  const { interval = 3000, maxAttempts = 100, initialDelay = 0 } = options
 
   const isLoading = ref(false)
   const attemptCount = ref(0)
@@ -72,7 +74,11 @@ export function usePolling<T>(
     lastError.value = null
 
     return new Promise<T>((resolve, reject) => {
-      poll(resolve, reject)
+      if (initialDelay > 0) {
+        timer = setTimeout(() => poll(resolve, reject), initialDelay)
+      } else {
+        poll(resolve, reject)
+      }
     })
   }
 

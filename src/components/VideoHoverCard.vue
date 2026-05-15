@@ -61,6 +61,12 @@ function handleMouseLeave() {
   overflow: hidden;
   cursor: pointer;
   backdrop-filter: blur(16px);
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+  will-change: transform;
+}
+.video-hover-card:hover {
+  transform: perspective(800px) rotateX(-2deg) translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 30px rgba(20, 150, 243, 0.08);
 }
 
 .media-shell {

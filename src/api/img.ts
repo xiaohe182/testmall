@@ -9,6 +9,7 @@ export type ImgGenerationOptions = {
   quality?: 'hd' | 'standard'
   watermarkEnabled?: boolean
   userId?: string
+  signal?: AbortSignal
 }
 
 export async function genImg(prompt: string, options: ImgGenerationOptions = {}): Promise<ImgResult> {
@@ -31,6 +32,6 @@ export async function genImg(prompt: string, options: ImgGenerationOptions = {})
     body.user_id = options.userId
   }
 
-  const { data } = await http.post('/images/generations', body)
+  const { data } = await http.post('/images/generations', body, { signal: options.signal })
   return data.data?.[0] ?? data
 }

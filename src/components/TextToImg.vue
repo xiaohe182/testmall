@@ -4,6 +4,7 @@ import { useVideoStore } from '@/stores/video'
 import PromptInput from '@/components/PromptInput.vue'
 import GenButton from '@/components/GenButton.vue'
 import ChipSelect from '@/components/ChipSelect.vue'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const imgStore = useImageStore()
 const videoStore = useVideoStore()
@@ -86,22 +87,22 @@ function sendToVideo(url: string) {
             />
           </div>
 
-          <label class="model-picker">
-            <select
-              v-model="imgStore.model"
-              class="model-select"
-              :disabled="imgStore.loading"
-              @change="imgStore.syncSize()"
-            >
-              <option
-                v-for="m in imgStore.modelOptions"
-                :key="m.id"
-                :value="m.id"
-              >
-                {{ m.name }} · {{ m.pricing.cnyPerCall === null ? '价格待确认' : `${m.pricing.cnyPerCall}元/次` }}
-              </option>
-            </select>
-          </label>
+          <div class="model-picker">
+            <Select v-model="imgStore.model" :disabled="imgStore.loading" @update:model-value="imgStore.syncSize()">
+              <SelectTrigger class="model-trigger">
+                <SelectValue placeholder="选择模型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="m in imgStore.modelOptions"
+                  :key="m.id"
+                  :value="m.id"
+                >
+                  {{ m.name }} · {{ m.pricing.cnyPerCall === null ? '价格待确认' : `${m.pricing.cnyPerCall}元/次` }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
     </div>
@@ -165,32 +166,17 @@ function sendToVideo(url: string) {
 
 <style scoped>
 .t2i-wrap {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  display: grid;
+  grid-template-columns: 380px 1fr;
   gap: 28px;
 }
 .input-area {
-  flex: 0 0 380px;
-  width: 380px;
-  max-width: 380px;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 @media (max-width: 860px) {
   .t2i-wrap {
-    flex-direction: column;
-  }
-  .input-area {
-    flex: none;
-    width: 100%;
-    max-width: 100%;
-  }
-  .card { flex: none; }
-  .result-area {
-    flex: none;
-    width: 100%;
+    grid-template-columns: 1fr;
   }
   .card-actions {
     flex-direction: column;
@@ -217,7 +203,7 @@ function sendToVideo(url: string) {
   min-width: 0;
   display: block;
 }
-.model-select {
+.model-trigger {
   width: 100%;
   height: 46px;
   border-radius: 14px;
@@ -230,11 +216,11 @@ function sendToVideo(url: string) {
   padding: 0 12px;
   outline: none;
 }
-.model-select:focus {
+.model-trigger:focus {
   background: rgb(22, 22, 26);
   box-shadow: 0 8px 28px rgba(20, 150, 243, 0.12);
 }
-.model-select:disabled {
+.model-trigger:disabled {
   opacity: 0.5;
 }
 
@@ -332,11 +318,10 @@ function sendToVideo(url: string) {
 }
 
 .result-area {
-  flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 .result-fill {
   flex: 1;
@@ -494,4 +479,11 @@ function sendToVideo(url: string) {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.result-grid .result-item {
+  animation: resultEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.result-grid .result-item:nth-child(2) { animation-delay: 0.08s; }
+.result-grid .result-item:nth-child(3) { animation-delay: 0.16s; }
+.result-grid .result-item:nth-child(4) { animation-delay: 0.24s; }
 </style>

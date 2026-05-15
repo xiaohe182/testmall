@@ -2,11 +2,10 @@ import { ref, computed, onScopeDispose } from 'vue'
 import { defineStore } from 'pinia'
 import { genImg, type ImgResult } from '@/api/img'
 import { DEFAULT_IMAGE_MODEL, IMAGE_MODELS } from '@/config/models'
-import { useToast } from '@/composables/useToast'
+import { toast } from 'vue-sonner'
 import { useHistoryStore } from './history'
 
 export const useImageStore = defineStore('image', () => {
-  const toast = useToast()
   const historyStore = useHistoryStore()
 
   const prompt = ref('')
@@ -75,7 +74,8 @@ export const useImageStore = defineStore('image', () => {
         model: model.value,
         size: size.value,
         quality: quality.value,
-        watermarkEnabled: currentModel.value.imageOptions?.watermarkEnabledDefault
+        watermarkEnabled: currentModel.value.imageOptions?.watermarkEnabledDefault,
+        signal: ac.signal
       })
     )
 
@@ -105,7 +105,7 @@ export const useImageStore = defineStore('image', () => {
         ? `全部生成失败：${failedReasons[0]}`
         : `${failedReasons.length} 张生成失败`
       error.value = msg
-      toast.show(msg, 'error')
+      toast.error(msg)
     }
 
     loading.value = false

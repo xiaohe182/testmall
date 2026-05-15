@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+
 defineProps<{ label: string; items: string[]; modelValue: string }>()
 defineEmits<{
   'update:modelValue': [v: string]
@@ -10,13 +12,21 @@ defineEmits<{
     <div class="label-row">
       <span class="label">{{ label }}</span>
     </div>
-    <div class="opts">
-      <button
-        v-for="s in items" :key="s"
-        :class="['chip', { active: modelValue === s }]"
-        @click="$emit('update:modelValue', s)"
-      >{{ s }}</button>
-    </div>
+    <ToggleGroup
+      type="single"
+      :model-value="modelValue"
+      @update:model-value="$emit('update:modelValue', $event as string)"
+      class="opts"
+    >
+      <ToggleGroupItem
+        v-for="s in items"
+        :key="s"
+        :value="s"
+        class="chip"
+      >
+        {{ s }}
+      </ToggleGroupItem>
+    </ToggleGroup>
   </div>
 </template>
 
@@ -59,17 +69,19 @@ defineEmits<{
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
   -webkit-font-smoothing: antialiased;
+  min-height: auto;
+  height: auto;
 }
 
-.chip:hover:not(.active) {
+.chip:hover:not([data-state="on"]) {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.chip.active {
+.chip[data-state="on"] {
   background: rgba(20, 150, 243, 0.1);
   color: var(--color-active-blue);
   font-weight: 600;
-  box-shadow: 0 0 10px rgba(20, 150, 243, 0.1); 
+  box-shadow: 0 0 10px rgba(20, 150, 243, 0.1);
 }
 
 .chip:focus-visible {
